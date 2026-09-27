@@ -7,8 +7,6 @@ create table public.profiles (
   display_name text,
   avatar_url text,
   role text not null default 'user' check (role in ('user', 'admin')),
-  approved_count int not null default 0,
-  rejected_count int not null default 0,
   banned boolean not null default false,
   created_at timestamptz not null default now()
 );
