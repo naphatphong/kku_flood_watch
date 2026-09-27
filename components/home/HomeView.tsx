@@ -3,9 +3,11 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState } from 'react';
+import { UserMenu } from '@/components/auth/UserMenu';
 import type { Selection } from '@/components/map/FloodMap';
 import { SearchIcon } from '@/components/ui/icons';
 import { Segmented } from '@/components/ui/Segmented';
+import type { Viewer } from '@/lib/auth';
 import { DEFAULT_VEHICLE, VEHICLES, type Vehicle } from '@/lib/config';
 import { useMapData } from '@/lib/hooks/useMapData';
 import { ActionBar } from './ActionBar';
@@ -20,7 +22,7 @@ import { ZoneList } from './ZoneList';
 const FloodMap = dynamic(() => import('@/components/map/FloodMap'), { ssr: false });
 const VEHICLE_TABS = VEHICLES.map((v) => ({ id: v.id, label: v.short }));
 
-export function HomeView() {
+export function HomeView({ viewer }: { viewer: Viewer | null }) {
   const { zones, reports, segments, error } = useMapData();
   const [vehicle, setVehicle] = useState<Vehicle>(DEFAULT_VEHICLE);
   const [selection, setSelection] = useState<Selection>(null);
@@ -43,7 +45,7 @@ export function HomeView() {
         onSelect={setSelection}
       />
       <Panel expanded={expanded} onToggle={() => setExpanded((e) => !e)} scrollKey={selection} footer={<ActionBar />}>
-        <PanelHeader updatedAt={zones?.updatedAt} demo={zones?.demo} />
+        <PanelHeader updatedAt={zones?.updatedAt} demo={zones?.demo} actions={<UserMenu viewer={viewer} />} />
 
         <Link
           href="/navigate"
