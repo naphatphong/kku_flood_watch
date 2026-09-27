@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChevronIcon } from '@/components/ui/icons';
 import { PillLink } from '@/components/ui/Pill';
+import { StatusChip } from '@/components/ui/StatusChip';
 import { getViewer } from '@/lib/auth';
 import { WATER_LEVELS, zoneLevel, type WaterLevel } from '@/lib/config';
 import type { ReportStatus } from '@/lib/domain/types';
@@ -12,13 +13,6 @@ import { isSupabaseConfigured } from '@/lib/supabase/env';
 
 export const metadata: Metadata = { title: 'โพสต์ของฉัน' };
 
-const STATUS: Record<ReportStatus, { label: string; className: string }> = {
-  approved: { label: 'ขึ้นแผนที่แล้ว', className: 'bg-[#E4F6E9] text-[#1B7A35]' },
-  pending: { label: 'รอแอดมินตรวจ', className: 'bg-[#FFF1CC] text-[#7A5200]' },
-  rejected: { label: 'ไม่ผ่าน', className: 'bg-[#FDECEA] text-danger' },
-  hidden: { label: 'ถูกซ่อน', className: 'bg-[#FDECEA] text-danger' },
-  deleted: { label: 'ถูกลบ', className: 'bg-fill text-secondary' },
-};
 
 export default async function MyPostsPage() {
   if (!isSupabaseConfigured) redirect('/login');
@@ -50,7 +44,6 @@ export default async function MyPostsPage() {
         <ul className="rounded-3xl bg-white/85 px-4 shadow-sm">
           {posts.map((p) => {
             const water = WATER_LEVELS[p.water_level as WaterLevel];
-            const status = STATUS[p.status as ReportStatus];
             return (
               <li key={p.id} className="border-b border-separator last:border-0">
                 <Link href={`/post/${p.id}`} className="flex items-center gap-3 py-3.5">
@@ -63,7 +56,7 @@ export default async function MyPostsPage() {
                       {timeAgo(p.created_at)} · ยังท่วม {p.still_votes} · ลดแล้ว {p.receded_votes}
                     </span>
                   </span>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${status.className}`}>{status.label}</span>
+                  <StatusChip status={p.status as ReportStatus} />
                 </Link>
               </li>
             );

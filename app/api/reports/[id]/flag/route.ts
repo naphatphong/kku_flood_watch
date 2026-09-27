@@ -1,12 +1,10 @@
 import { getViewer } from '@/lib/auth';
-import { POST as POST_LIMITS } from '@/lib/config';
+import { FLAG_REASONS, POST as POST_LIMITS } from '@/lib/config';
 import { recompute } from '@/lib/data/refresh';
 import { errorJson, rateLimited } from '@/lib/http';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
 import { createClient } from '@/lib/supabase/server';
-
-const REASONS = ['false', 'spam', 'inappropriate', 'duplicate'];
 
 /** Report a post (PLAN §7). Enough distinct users hide it until an admin reviews it. Body: {reason}. */
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -19,7 +17,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
   const id = Number((await params).id);
   const { reason } = await req.json().catch(() => ({}));
-  if (!Number.isInteger(id) || !REASONS.includes(reason)) return errorJson(400, 'ข้อมูลไม่ถูกต้อง');
+  if (!Number.isInteger(id) || !Object.hasOwn(FLAG_REASONS, reason)) return errorJson(400, 'ข้อมูลไม่ถูกต้อง');
 
   const { error } = await (await createClient()).from('post_flags').insert({ report_id: id, user_id: viewer.id, reason });
   if (error) return errorJson(error.code === '23505' ? 409 : 400, error.code === '23505' ? 'คุณรีพอร์ตโพสต์นี้แล้ว' : 'รีพอร์ตไม่สำเร็จ');

@@ -60,6 +60,14 @@ export const ROAD_STATUS = {
 export type RoadStatus = keyof typeof ROAD_STATUS;
 export type Passability = Exclude<RoadStatus, 'unknown'>;
 
+export const FLAG_REASONS = {
+  false: 'ข้อมูลเท็จ',
+  spam: 'สแปม',
+  inappropriate: 'ไม่เหมาะสม',
+  duplicate: 'ซ้ำ',
+} as const;
+export type FlagReason = keyof typeof FLAG_REASONS;
+
 export const POST = {
   radiusM: { min: 20, max: 300, default: 100 },
   roadMaxLengthM: 500,

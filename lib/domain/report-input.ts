@@ -43,10 +43,10 @@ export function parseReportForm(form: FormData): Result {
   if (kind !== 'area' && kind !== 'road') return fail('เลือกชนิดโพสต์: พื้นที่ หรือ ถนน');
 
   const waterLevel = form.get('water_level');
-  if (typeof waterLevel !== 'string' || !(waterLevel in WATER_LEVELS)) return fail('เลือกระดับน้ำ');
+  if (typeof waterLevel !== 'string' || !Object.hasOwn(WATER_LEVELS, waterLevel)) return fail('เลือกระดับน้ำ');
 
   const statusTags = [...new Set(list(form.get('status_tags')))];
-  if (statusTags.some((t) => !(t in STATUS_TAGS))) return fail('แท็กสถานะไม่ถูกต้อง');
+  if (statusTags.some((t) => !Object.hasOwn(STATUS_TAGS, t))) return fail('แท็กสถานะไม่ถูกต้อง');
 
   let passability: Record<string, string> = {};
   try {
@@ -58,7 +58,7 @@ export function parseReportForm(form: FormData): Result {
   if (
     typeof passability !== 'object' ||
     Array.isArray(passability) ||
-    Object.entries(passability).some(([v, s]) => !vehicles.has(v) || !(s in ROAD_STATUS) || s === 'unknown')
+    Object.entries(passability).some(([v, s]) => !vehicles.has(v) || typeof s !== 'string' || !Object.hasOwn(ROAD_STATUS, s) || s === 'unknown')
   )
     return fail('ข้อมูลการผ่านไม่ถูกต้อง');
 

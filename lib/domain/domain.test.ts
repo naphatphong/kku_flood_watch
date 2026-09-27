@@ -183,6 +183,8 @@ test('report form validation', () => {
 
   assert.equal(parseReportForm(form({ ...area, radius_m: '301' })).ok, false);
   assert.equal(parseReportForm(form({ ...area, water_level: 'ocean' })).ok, false);
+  assert.equal(parseReportForm(form({ ...area, water_level: 'toString' })).ok, false); // inherited keys don't count
+  assert.equal(parseReportForm(form({ ...area, status_tags: 'constructor' })).ok, false);
   assert.equal(parseReportForm(form({ ...area, status_tags: 'rising,flying' })).ok, false);
   assert.equal(parseReportForm(form({ ...area, passability: '{"boat":"ok"}' })).ok, false);
   assert.equal(parseReportForm(form({ ...area, passability: '{"car":"unknown"}' })).ok, false);
