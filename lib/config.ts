@@ -112,6 +112,19 @@ export const WATCH = {
   minPct: 30, // show when rain × low-lying factor (PLAN §5 base) reaches this %
 };
 
+// Weather page (owner request, 27 Sep 2026): Open-Meteo forecast for the area center.
+export const WEATHER = {
+  days: 10,
+  cacheMinutes: 15,
+  alerts: {
+    heavyRainMm: 35, // Thai Meteorological Department: heavy 35.1–90 mm/day
+    veryHeavyRainMm: 90, // very heavy > 90 mm/day
+    gustKmh: 50, // strong gusts
+    strongGustKmh: 75,
+    heatC: 40, // TMD "ร้อนจัด"
+  },
+};
+
 export const ZONE_LEVELS = [
   { min: 80, label: 'อันตราย', color: '#FF3B30', text: '#D70015' },
   { min: 60, label: 'สูง', color: '#FF9500', text: '#C93400' },

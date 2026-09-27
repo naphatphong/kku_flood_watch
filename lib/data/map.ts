@@ -54,7 +54,7 @@ export const activeCutoff = (now = new Date()) =>
   new Date(now.getTime() - POST.expiryHours * 3_600_000).toISOString();
 
 /** Watch circles for this rain, leaving out low spots already inside a reported circle. */
-const watchFor = (score: number, clusters: ClusterDTO[]): WatchDTO[] =>
+export const watchFor = (score: number, clusters: ClusterDTO[] = []): WatchDTO[] =>
   watchCircles(lowSpots as LowSpot[], score, clusters.map((c) => ({ center: [c.lng, c.lat], radiusM: c.radiusM }))).map(
     ({ id, name, center, radiusM, elevationM, pct }) => ({ id, name, lng: center[0], lat: center[1], radiusM, elevationM, pct }),
   );
