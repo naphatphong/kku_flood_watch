@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { SITE } from './config';
 
 // Noto Sans Thai (SIL OFL, assets/fonts/OFL.txt) for Open Graph images; satori needs TTF/OTF/WOFF.
 const FONT_FILES = [
@@ -47,16 +48,17 @@ export function OgFrame({ children }: { children: React.ReactNode }) {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'white',
-            fontSize: 44,
-            fontWeight: 700,
           }}
         >
-          ~
+          {/* The drop from app/icon.svg */}
+          <svg width="44" height="44" viewBox="0 0 64 64" fill="none" stroke="white" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M32 10c7 9.5 14 17.8 14 26a14 14 0 01-28 0c0-8.2 7-16.5 14-26z" />
+            <path d="M25 38a7 7 0 007 7" />
+          </svg>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ fontSize: 40, fontWeight: 700 }}>KKU Flood Watch</div>
-          <div style={{ fontSize: 26, color: '#6E6E73' }}>น้ำท่วมรอบ มข. จากรายงานของชุมชน</div>
+          <div style={{ fontSize: 40, fontWeight: 700 }}>{SITE.name}</div>
+          <div style={{ fontSize: 26, color: '#6E6E73' }}>{SITE.tagline}</div>
         </div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center' }}>{children}</div>

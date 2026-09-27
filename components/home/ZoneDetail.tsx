@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { SCORE, zoneLevel } from '@/lib/config';
 import type { ClusterDTO, RainDTO } from '@/lib/data/types';
 import { pct } from '@/lib/format';
@@ -37,7 +38,10 @@ export function ZoneDetail({ cluster, rain, onClose }: { cluster: ClusterDTO; ra
         {rain && <Row label="ฝนที่ใช้คิด" value={`3 ชม. ${rain.r3} · 24 ชม. ${rain.r24} มม. · ${rain.rainyDays} วัน`} />}
       </dl>
       <p className="mt-3 rounded-xl bg-fill/60 px-3 py-2 text-xs leading-relaxed text-secondary">
-        % = (1 − c) × base + c × report · ยิ่งมีโพสต์ใหม่มาก ยิ่งเชื่อโพสต์มาก
+        % = (1 − c) × base + c × report · ยิ่งมีโพสต์ใหม่มาก ยิ่งเชื่อโพสต์มาก ·{' '}
+        <Link href="/about" className="font-semibold text-link">
+          วิธีคำนวณ
+        </Link>
       </p>
     </DetailCard>
   );
