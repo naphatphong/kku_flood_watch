@@ -76,6 +76,9 @@ export function HomeView({ viewer }: { viewer: Viewer | null }) {
               selectedId={cluster?.id ?? null}
               onSelect={(id) => setSelection({ type: 'cluster', id })}
             />
+            <Link href="/about" className="px-1 text-center text-[13px] text-secondary hover:text-link">
+              วิธีคำนวณ แหล่งข้อมูล และข้อจำกัด
+            </Link>
           </>
         ) : (
           <div aria-busy className="flex flex-col gap-3">

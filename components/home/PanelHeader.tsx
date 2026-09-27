@@ -10,19 +10,19 @@ export function PanelHeader({ updatedAt, demo, actions }: { updatedAt?: string; 
         <DropIcon size={22} />
       </span>
       <div className="min-w-0 grow">
-        <h1 className="text-[19px] leading-tight font-bold tracking-tight">{SITE.name}</h1>
-        <p className="truncate text-[13px] text-secondary">
-          น้ำท่วมรอบ มข. · {updatedAt ? `อัปเดต ${clock(updatedAt)}` : 'กำลังโหลด…'}
+        <h1 className="truncate text-[19px] leading-tight font-bold tracking-tight">{SITE.name}</h1>
+        <p className="flex items-center gap-1.5 truncate text-[13px] text-secondary">
+          {demo && (
+            <span
+              title="ยังไม่ได้เชื่อมฐานข้อมูล ข้อมูลบนแผนที่เป็นตัวอย่าง"
+              className="shrink-0 rounded-full bg-[#FFF1CC] px-2 py-px text-[11px] font-semibold text-[#7A5200]"
+            >
+              ข้อมูลตัวอย่าง
+            </span>
+          )}
+          <span className="truncate">{demo ? '' : 'น้ำท่วมรอบ มข. · '}{updatedAt ? `อัปเดต ${clock(updatedAt)}` : 'กำลังโหลด…'}</span>
         </p>
       </div>
-      {demo && (
-        <span
-          title="ยังไม่ได้เชื่อมฐานข้อมูล ข้อมูลบนแผนที่เป็นตัวอย่าง"
-          className="shrink-0 rounded-full bg-[#FFF1CC] px-2.5 py-1 text-xs font-semibold text-[#7A5200]"
-        >
-          ข้อมูลตัวอย่าง
-        </span>
-      )}
       {actions}
     </header>
   );
