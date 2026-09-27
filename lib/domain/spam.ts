@@ -16,7 +16,7 @@ export const SPAM_REASON_LABELS: Record<SpamReason, string> = {
 export interface SpamInput {
   accountCreatedAt: Date;
   posterDistanceM: number | null; // null when the poster sent no GPS
-  waterLevel: WaterLevel;
+  waterLevel: WaterLevel | null; // null for incident posts
   rain24Mm: number;
   radiusM: number | null;
   roadLengthM: number | null;
@@ -41,6 +41,7 @@ export function spamCheck(input: SpamInput, now: Date) {
   if (ageHours < SPAM.newAccountHours) reasons.push('newAccount');
   if (input.posterDistanceM == null) reasons.push('noGps');
   if (
+    input.waterLevel &&
     WATER_LEVELS[input.waterLevel].score >= WATER_LEVELS[SPAM.implausibleDepth.fromLevel].score &&
     input.rain24Mm < SPAM.implausibleDepth.maxRain24Mm
   )

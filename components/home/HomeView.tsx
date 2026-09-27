@@ -13,6 +13,7 @@ import { useMapData } from '@/lib/hooks/useMapData';
 import { ActionBar } from './ActionBar';
 import { Panel } from '@/components/ui/Panel';
 import { PanelHeader } from './PanelHeader';
+import { IncidentList } from './IncidentList';
 import { RainCard } from './RainCard';
 import { ReportDetail } from './ReportDetail';
 import { RoadLegend } from './RoadLegend';
@@ -90,6 +91,7 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
               onSelect={(id) => setSelection({ type: 'cluster', id })}
             />
             <WatchList watch={watch} selectedId={watchSpot?.id ?? null} onSelect={(id) => setSelection({ type: 'watch', id })} />
+            <IncidentList reports={pins} selectedId={report?.id ?? null} onSelect={(id) => setSelection({ type: 'report', id })} />
             <Link href="/about" className="px-1 text-center text-[13px] text-secondary hover:text-link">
               วิธีคำนวณ แหล่งข้อมูล และข้อจำกัด
             </Link>

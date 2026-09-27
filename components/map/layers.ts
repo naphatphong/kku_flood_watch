@@ -1,9 +1,10 @@
 // MapLibre sources and layer specs. Colors and thresholds come from lib/config.ts.
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
 import type { FeatureCollection } from 'geojson';
-import { MAP, ROAD_STATUS, WATER_LEVELS, zoneLevel, type Vehicle } from '@/lib/config';
+import { MAP, ROAD_STATUS, zoneLevel, type Vehicle } from '@/lib/config';
 import type { ClusterDTO, ReportPin, WatchDTO } from '@/lib/data/types';
 import { destination } from '@/lib/domain/geo';
+import { postLabel } from '@/lib/domain/post';
 
 // Radii are meters; convert to pixels per zoom (Web Mercator at the area's latitude).
 const MPP0 = 156543.03 * Math.cos((MAP.center[1] * Math.PI) / 180);
@@ -41,8 +42,9 @@ export const reportsToGeoJSON = (reports: ReportPin[]): FeatureCollection => ({
     properties: {
       id: r.id,
       kind: r.kind,
+      category: r.category,
       radius_m: r.radiusM ?? 0,
-      color: zoneLevel(WATER_LEVELS[r.waterLevel].score).color,
+      color: postLabel(r).color,
     },
     geometry: { type: 'Point', coordinates: [r.lng, r.lat] },
   })),
@@ -111,7 +113,7 @@ export const layers = (vehicle: Vehicle): LayerSpecification[] => [
     id: 'reports-area',
     type: 'circle',
     source: 'reports',
-    filter: ['==', ['get', 'kind'], 'area'],
+    filter: ['all', ['==', ['get', 'kind'], 'area'], ['==', ['get', 'category'], 'flood']],
     paint: {
       'circle-radius': METERS,
       'circle-pitch-alignment': 'map',
@@ -126,11 +128,24 @@ export const layers = (vehicle: Vehicle): LayerSpecification[] => [
     id: 'reports-dot',
     type: 'circle',
     source: 'reports',
+    filter: ['==', ['get', 'category'], 'flood'],
     paint: {
       'circle-radius': ['case', SELECTED, 9, 6],
       'circle-color': ['get', 'color'],
       'circle-stroke-color': '#FFFFFF',
       'circle-stroke-width': 2.5,
+    },
+  },
+  {
+    // Road incident posts (images from incident-icons.ts).
+    id: 'incidents',
+    type: 'symbol',
+    source: 'reports',
+    filter: ['!=', ['get', 'category'], 'flood'],
+    layout: {
+      'icon-image': ['concat', 'incident-', ['get', 'category']],
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
     },
   },
   {
@@ -159,4 +174,4 @@ export const layers = (vehicle: Vehicle): LayerSpecification[] => [
   },
 ];
 
-export const CLICKABLE = ['reports-dot', 'clusters', 'watch-fill'];
+export const CLICKABLE = ['reports-dot', 'incidents', 'clusters', 'watch-fill'];

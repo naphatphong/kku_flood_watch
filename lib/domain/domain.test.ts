@@ -4,12 +4,12 @@ import { test } from 'node:test';
 import { MAP, SCORE } from '../config';
 import { buildClusters, groupReports, isFlooded, lowFactor, scoreCluster } from './cluster';
 import { destination, distanceM, type LngLat } from './geo';
-import { expiresAt, postScore, postWeight, voteMultiplier } from './post';
+import { expiresAt, isActive, postScore, postWeight, voteMultiplier } from './post';
 import { rainScore, summarizeRain } from './rain';
 import { insideArea, parseReportForm } from './report-input';
 import { watchCircles } from './watch';
 import { dayAlerts, forecastDays, weatherInfo, type DayInput } from './weather';
-import { blockedAhead, buildSteps, googleMapsUrl, insertVia, nearestIndex, parseRouteQuery, pickRoutes, routeEnds, summarize, type PathSegment } from './route';
+import { blockedAhead, buildSteps, googleMapsUrl, incidentsAlong, insertVia, nearestIndex, parseRouteQuery, pickRoutes, routeEnds, summarize, type PathSegment } from './route';
 import { chainLengthM, toggleSegment, type ChainSegment } from './road-chain';
 import { segmentStatuses } from './segments';
 import { spamCheck } from './spam';
@@ -22,6 +22,7 @@ const ORIGIN: LngLat = [102.8173, 16.4617];
 
 const report = (over: Partial<Report> & { id: number }): Report => ({
   kind: 'area',
+  category: 'flood',
   position: ORIGIN,
   radiusM: 50,
   waterLevel: 'knee',
@@ -193,6 +194,16 @@ test('report form validation', () => {
   assert.equal(parseReportForm(form({ ...area, passability: '{"car":"unknown"}' })).ok, false);
   const far = destination(ORIGIN, 6000, 0);
   assert.equal(parseReportForm(form({ ...area, lng: String(far[0]), lat: String(far[1]) })).ok, false);
+
+  // Incident posts: no water level; closures block every vehicle, other incidents leave road status alone.
+  const { water_level: _w, status_tags: _t, passability: _p, ...place } = area;
+  const accident = parseReportForm(form({ ...place, category: 'accident', water_level: 'waist', passability: '{"car":"blocked"}' }));
+  assert.ok(accident.ok);
+  assert.deepEqual(accident.ok && [accident.input.category, accident.input.waterLevel, accident.input.statusTags, accident.input.passability], ['accident', null, [], {}]);
+  const closure = parseReportForm(form({ ...place, category: 'closure' }));
+  assert.deepEqual(closure.ok && closure.input.passability, { motorcycle: 'blocked', car: 'blocked', pickup: 'blocked', walk: 'blocked' });
+  assert.equal(parseReportForm(form({ ...place, category: 'meteor' })).ok, false);
+  assert.equal(parseReportForm(form({ ...place, category: 'flood' })).ok, false); // floods still need a water level
 
   const road = parseReportForm(form({ ...area, kind: 'road', segment_ids: '5,6,6' }));
   assert.deepEqual(road.ok && road.input.segmentIds, [5, 6]);
@@ -380,4 +391,23 @@ test('traffic incidents: Thai label, start point, place and delay', () => {
   assert.deepEqual(line, { id: 'a', category: 8, label: 'ปิดถนน', text: 'ปิด', road: 'A → B', delayS: 300, at: [102.8, 16.4] });
   assert.deepEqual(point, { id: 'b', category: 13, label: 'เหตุบนถนน', text: 'เหตุบนถนน', road: '2', delayS: null, at: [102.82, 16.42] });
   assert.deepEqual(parseIncidents({}), []);
+});
+
+test('incident posts expire sooner; route warnings list incidents near the route in order', () => {
+  const created = new Date('2026-09-27T03:00:00Z');
+  assert.equal(expiresAt(created, null, 'accident').toISOString(), '2026-09-27T05:00:00.000Z');
+  assert.equal(expiresAt(created, null, 'flood').toISOString(), '2026-09-27T09:00:00.000Z');
+  const soon = new Date('2026-09-27T04:00:00Z');
+  const votes = (still: number, receded: number) => ({ createdAt: created, lastStillVoteAt: null, votes: { still, receded } });
+  assert.equal(isActive({ ...votes(0, 1), category: 'accident' }, soon), true); // one "cleared" vs the poster
+  assert.equal(isActive({ ...votes(0, 2), category: 'accident' }, soon), false);
+  assert.equal(isActive({ ...votes(1, 2), category: 'closure' }, soon), true);
+  assert.equal(isActive({ ...votes(0, 5), category: 'flood' }, soon), true); // floods fade by weight instead
+
+  const line: LngLat[] = [ORIGIN, destination(ORIGIN, 1000, 0)];
+  const near = (east: number, north: number, label: string) => ({ label, at: destination(ORIGIN, east, north) });
+  assert.deepEqual(
+    incidentsAlong(line, [near(800, 20, 'b'), near(500, 200, 'far'), near(100, -30, 'a')]).map((i) => i.label),
+    ['a', 'b'],
+  );
 });

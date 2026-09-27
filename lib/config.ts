@@ -101,6 +101,22 @@ export const ROAD_STATUS = {
 export type RoadStatus = keyof typeof ROAD_STATUS;
 export type Passability = Exclude<RoadStatus, 'unknown'>;
 
+// Road incident posts (owner request, 27 Sep 2026): same flow as flood posts (login, photo,
+// votes, flags, moderation) but no water level. Closures count as "blocked" for every vehicle,
+// so navigation avoids them; the others show as warnings on the route cards.
+export const INCIDENTS = {
+  accident: { label: 'อุบัติเหตุ', color: '#E8453C', blocks: false, hint: 'เช่น รถชนกัน 2 คัน กีดขวางเลนซ้าย' },
+  closure: { label: 'ปิดถนน/ปิดช่องจราจร', color: '#1D1D1F', blocks: true, hint: 'เช่น ปิดทั้งเส้นถึงเย็นนี้ หรือปิด 1 ช่อง' },
+  obstacle: { label: 'รถเสีย/สิ่งกีดขวาง', color: '#AF52DE', blocks: false, hint: 'เช่น ต้นไม้ล้มขวางถนน' },
+  roadworks: { label: 'ซ่อมถนน', color: '#FF9F0A', blocks: false, hint: 'เช่น ขุดถนน เหลือช่องเดียว' },
+} as const;
+export type IncidentCategory = keyof typeof INCIDENTS;
+export type Category = 'flood' | IncidentCategory;
+export const INCIDENT_POST = {
+  expiryHours: 2, // after posting or the latest "still there" vote
+  routeWarnM: 40, // route cards warn about incidents this close to the route
+};
+
 export const FLAG_REASONS = {
   false: 'ข้อมูลเท็จ',
   spam: 'สแปม',

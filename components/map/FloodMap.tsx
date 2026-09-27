@@ -4,6 +4,7 @@ import maplibregl, { type GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection } from 'geojson';
 import { addRealism, ViewControl } from './realism';
+import { addIncidentIcons } from './incident-icons';
 import { addTraffic } from './traffic';
 import { useEffect, useMemo, useRef } from 'react';
 import { MAP, type Vehicle } from '@/lib/config';
@@ -80,6 +81,7 @@ export default function FloodMap({
       m.addSource('reports', { type: 'geojson', data: data.current.reportData, promoteId: 'id' });
       m.addSource('watch', { type: 'geojson', data: data.current.watchData, promoteId: 'id' });
       m.addSource('segments', { type: 'geojson', data: data.current.segments ?? EMPTY });
+      addIncidentIcons(m);
       layers(latest.current.vehicle).forEach((l) => m.addLayer(l));
       ready.current = true;
 

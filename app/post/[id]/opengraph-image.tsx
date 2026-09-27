@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og';
-import { STATUS_TAGS, WATER_LEVELS, zoneLevel } from '@/lib/config';
+import { STATUS_TAGS } from '@/lib/config';
 import { getPost } from '@/lib/data/post';
+import { postLabel } from '@/lib/domain/post';
 import { clock } from '@/lib/format';
 import { OG_SIZE, OgFrame, ogFonts } from '@/lib/og';
 
@@ -10,18 +11,17 @@ export const contentType = 'image/png';
 
 export default async function Image({ params }: { params: Promise<{ id: string }> }) {
   const post = await getPost(Number((await params).id), null);
-  const water = post ? WATER_LEVELS[post.waterLevel] : null;
-  const level = zoneLevel(water?.score ?? 0);
+  const head = post && postLabel(post);
   return new ImageResponse(
     (
       <OgFrame>
-        {post && water ? (
+        {post && head ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
             <div style={{ display: 'flex' }}>
               <div
-                style={{ fontSize: 88, fontWeight: 700, color: level.text, background: `${level.color}26`, borderRadius: 40, padding: '8px 40px' }}
+                style={{ fontSize: 88, fontWeight: 700, color: head.text, background: `${head.color}26`, borderRadius: 40, padding: '8px 40px' }}
               >
-                {water.label}
+                {head.label}
               </div>
             </div>
             <div style={{ fontSize: 44, fontWeight: 700 }}>

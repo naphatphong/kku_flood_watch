@@ -1,9 +1,11 @@
 import 'server-only';
-import { ROUTING, type RoadStatus } from '../config';
+import { INCIDENTS, ROUTING, type IncidentCategory, type RoadStatus } from '../config';
 import type { LngLat } from '../domain/geo';
-import { pickRoutes, routeEnds, type PathSegment, type Route, type RouteQuery } from '../domain/route';
+import { isActive } from '../domain/post';
+import { incidentsAlong, pickRoutes, routeEnds, type PathSegment, type Route, type RouteIncident, type RouteQuery } from '../domain/route';
 import { createAnonClient } from '../supabase/anon';
-import { trafficTime } from './traffic';
+import { activeCutoff } from './map';
+import { getIncidents, trafficTime } from './traffic';
 
 interface SegmentRow {
   id: number;
@@ -52,8 +54,9 @@ export async function getRoutes(q: RouteQuery): Promise<RouteResponse> {
   const safe = (data.safe as SegmentRow[][]).map(toPath);
   const routes = pickRoutes(safe, data.plain ? toPath(data.plain) : null, q.vehicle);
   // Cards are picked on free-flow time; live traffic then corrects the times shown.
-  const times = await Promise.all(routes.map((r) => trafficTime(r.coords, q.vehicle)));
+  const [times, incidents] = await Promise.all([Promise.all(routes.map((r) => trafficTime(r.coords, q.vehicle))), incidentsNow()]);
   times.forEach((t, i) => t && Object.assign(routes[i], t));
+  for (const r of routes) r.incidents = incidentsAlong(r.coords, incidents);
   return {
     routes,
     start: [points[0].lng, points[0].lat],
@@ -62,4 +65,36 @@ export async function getRoutes(q: RouteQuery): Promise<RouteResponse> {
     fromOutside: ends.fromOutside,
     noSafeRoute: !safe.length,
   };
+}
+
+/**
+ * Incidents worth a warning: user posts (closures are left out, routing already avoids them)
+ * and TomTom incidents other than plain jams (the time on the card covers those).
+ */
+async function incidentsNow(): Promise<RouteIncident[]> {
+  const now = new Date();
+  const [posts, tomtom] = await Promise.all([
+    createAnonClient()
+      .from('reports')
+      .select('category, lng, lat, created_at, last_still_vote_at, still_votes, receded_votes')
+      .eq('status', 'approved')
+      .not('category', 'in', '(flood,closure)')
+      .or(`created_at.gt.${activeCutoff(now)},last_still_vote_at.gt.${activeCutoff(now)}`),
+    getIncidents().catch(() => []),
+  ]);
+  const own = (posts.data ?? [])
+    .filter((p) =>
+      isActive(
+        {
+          category: p.category,
+          createdAt: new Date(p.created_at),
+          lastStillVoteAt: p.last_still_vote_at && new Date(p.last_still_vote_at),
+          votes: { still: p.still_votes, receded: p.receded_votes },
+        },
+        now,
+      ),
+    )
+    .map((p) => ({ label: INCIDENTS[p.category as IncidentCategory].label, at: [p.lng, p.lat] as LngLat }));
+  const theirs = tomtom.filter((i) => i.category !== 6).map((i) => ({ label: `${i.label} (TomTom)`, at: i.at }));
+  return [...own, ...theirs];
 }

@@ -137,7 +137,7 @@ export default function NavigateMap({
       m.addSource('routes', { type: 'geojson', data: d.routes });
       m.addSource('parts', { type: 'geojson', data: d.parts });
       m.addSource('connectors', { type: 'geojson', data: d.connectors });
-      for (const l of contextLayers(vehicle)) if (!l.id.startsWith('reports')) m.addLayer(l);
+      for (const l of contextLayers(vehicle)) if (!('source' in l && l.source === 'reports')) m.addLayer(l);
 
       const alt = ['!', ['get', 'selected']] as maplibregl.ExpressionSpecification;
       const sel = ['get', 'selected'] as maplibregl.ExpressionSpecification;

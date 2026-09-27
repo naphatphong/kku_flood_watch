@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ChevronIcon } from '@/components/ui/icons';
-import { CLUSTER, LIMITS, MAP, POST, ROAD_STATUS, ROUTING, SCORE, SITE, STATUS_TAGS, TRAFFIC, WATCH, WATER_LEVELS, ZONE_LEVELS } from '@/lib/config';
+import { CLUSTER, INCIDENT_POST, INCIDENTS, LIMITS, MAP, POST, ROAD_STATUS, ROUTING, SCORE, SITE, STATUS_TAGS, TRAFFIC, WATCH, WATER_LEVELS, ZONE_LEVELS } from '@/lib/config';
 
 export const metadata: Metadata = {
   title: 'วิธีคำนวณและข้อจำกัด',
@@ -143,6 +143,23 @@ export default function AboutPage() {
           ระบบเสนอเส้นที่ปลอดภัยสุด เส้นสมดุล (ถ้าเร็วกว่าอย่างน้อย {ROUTING.minSavingPct}%) และเส้นสั้นสุดที่ไม่สนน้ำท่วม
           ถ้าเส้นไหนผ่านจุดที่ผ่านไม่ได้ จะเตือนก่อนเลือก ถนนวันเวย์ขับย้อนไม่ได้ (ยกเว้นเดินเท้า) ปลายทางนอกพื้นที่ จะพาไปถึงขอบพื้นที่แล้วส่งต่อ
           Google Maps
+        </p>
+      </Section>
+
+      <Section title="แจ้งเหตุบนถนน">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[14px]">
+          {Object.values(INCIDENTS).map((c) => (
+            <Swatch key={c.label} color={c.color} label={c.label} />
+          ))}
+        </div>
+        <p>
+          แจ้งอุบัติเหตุ ถนนปิด รถเสีย/สิ่งกีดขวาง และงานซ่อมถนนได้จากปุ่ม &ldquo;รายงาน/แจ้งเหตุ&rdquo; ใช้กติกาเดียวกับโพสต์น้ำท่วม
+          (ล็อกอิน คะแนนสแปม รีพอร์ต และแอดมินตรวจ) แต่หมดอายุเร็วกว่า: {INCIDENT_POST.expiryHours} ชม. หลังโพสต์ หรือหลังโหวต
+          &ldquo;ยังอยู่&rdquo; ครั้งล่าสุด หรือเมื่อโหวต &ldquo;เคลียร์แล้ว&rdquo; มากกว่า &ldquo;ยังอยู่&rdquo; (นับผู้โพสต์เป็น 1 เสียง)
+        </p>
+        <p>
+          ถนนที่แจ้งว่าปิด นับเป็น &ldquo;ผ่านไม่ได้&rdquo; สำหรับรถทุกแบบ ระบบนำทางจึงเลี่ยงให้ ส่วนเหตุอื่นไม่เปลี่ยนสีถนนและเส้นทาง
+          แต่การ์ดเส้นทางจะเตือนถ้าผ่านใกล้กว่า {INCIDENT_POST.routeWarnM} ม. (รวมเหตุจาก TomTom ด้วย) เหตุบนถนนไม่นำไปคิด % น้ำท่วม
         </p>
       </Section>
 

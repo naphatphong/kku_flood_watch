@@ -4,13 +4,13 @@ import { PillLink } from '@/components/ui/Pill';
 export function ActionBar() {
   return (
     <div className="flex gap-2.5">
-      <PillLink href="/navigate" variant="tinted" className="flex-1">
+      <PillLink href="/navigate" variant="tinted" className="flex-auto whitespace-nowrap">
         <RouteIcon size={17} />
         นำทางหลบน้ำ
       </PillLink>
-      <PillLink href="/report" className="flex-1">
+      <PillLink href="/report" className="flex-auto whitespace-nowrap">
         <PlusIcon size={16} />
-        รายงานน้ำท่วม
+        รายงาน/แจ้งเหตุ
       </PillLink>
     </div>
   );

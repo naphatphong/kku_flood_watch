@@ -1,6 +1,6 @@
 import 'server-only';
 import type { Viewer } from '../auth';
-import type { FlagReason, WaterLevel } from '../config';
+import type { Category, FlagReason, WaterLevel } from '../config';
 import type { SpamReason } from '../domain/spam';
 import type { ReportKind, ReportStatus } from '../domain/types';
 import { createAdminClient } from '../supabase/admin';
@@ -13,8 +13,9 @@ import { recompute } from './refresh';
 export interface AdminPost {
   id: number;
   kind: ReportKind;
+  category: Category;
   status: ReportStatus;
-  waterLevel: WaterLevel;
+  waterLevel: WaterLevel | null;
   note: string | null;
   photoUrl: string | null;
   createdAt: string;
@@ -47,13 +48,14 @@ export interface AdminLog {
 }
 
 const POST_COLUMNS =
-  'id, kind, status, water_level, note, photo_path, created_at, spam_score, spam_reasons, poster_distance_m, flag_count, user_id, profiles!reports_user_id_fkey(display_name, banned)';
+  'id, kind, category, status, water_level, note, photo_path, created_at, spam_score, spam_reasons, poster_distance_m, flag_count, user_id, profiles!reports_user_id_fkey(display_name, banned)';
 
 interface PostRow {
   id: number;
   kind: ReportKind;
+  category: Category;
   status: ReportStatus;
-  water_level: WaterLevel;
+  water_level: WaterLevel | null;
   note: string | null;
   photo_path: string | null;
   created_at: string;
@@ -78,6 +80,7 @@ async function withFlags(rows: PostRow[]): Promise<AdminPost[]> {
   return rows.map((r) => ({
     id: r.id,
     kind: r.kind,
+    category: r.category,
     status: r.status,
     waterLevel: r.water_level,
     note: r.note,

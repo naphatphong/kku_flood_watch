@@ -153,7 +153,7 @@ https://vercel.com → project **kku-flood-watch** → **Settings → Environmen
 
 ```bash
 CRON_SECRET='...' node scripts/setup-supabase.mjs refresh   # ต้องได้ 200 และ {"ok":true,...}
-node scripts/setup-supabase.mjs check                        # migrations 7, road_segments 21838, cron_jobs 1, vault_secrets 2, rain_rows ≥ 1
+node scripts/setup-supabase.mjs check                        # migrations 8, road_segments 21838, cron_jobs 1, vault_secrets 2, rain_rows ≥ 1
 ```
 
 ในเบราว์เซอร์:
@@ -179,6 +179,16 @@ node scripts/setup-supabase.mjs admin '<อีเมลแอดมินขอ�
 1. ลบ access token: https://supabase.com/dashboard/account/tokens → token `kku-setup` → Revoke/Delete
 2. ใน shell: `unset SUPABASE_ACCESS_TOKEN CRON_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET`
 3. ลบโฟลเดอร์ `kku_flood_watch` ที่ clone มา (ไม่ได้แก้อะไรในนั้น)
+
+## ขั้น 12: อัปเดตฐานข้อมูลหลังโค้ดมี migration ใหม่ (ทำเมื่อเจ้าของสั่ง)
+
+ใช้เมื่อเจ้าของบอกว่ามีไฟล์ใหม่ใน `supabase/migrations/` ต้องทำก่อน deploy เว็บเวอร์ชันใหม่
+
+1. สร้าง access token ชั่วคราวแบบขั้น 2 แล้ว `export SUPABASE_ACCESS_TOKEN=... SUPABASE_PROJECT_REF=...`
+2. `node scripts/setup-supabase.mjs migrate` ต้องเห็น `✓ <ชื่อไฟล์ใหม่>` (ไฟล์เก่าขึ้น `= ... (already applied)`)
+   ห้ามใช้คำสั่ง `db` ตรงนี้ เพราะ `db` นำเข้าถนนใหม่และลบการเชื่อมถนนของโพสต์เดิม
+3. `node scripts/setup-supabase.mjs check` ต้องได้ migrations เท่ากับจำนวนไฟล์ใน `supabase/migrations/`
+4. ลบ token ตามขั้น 11
 
 ## รายงานเจ้าของ (ห้ามใส่ค่าความลับ)
 

@@ -3,24 +3,29 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import type { Category } from '@/lib/config';
+import { voteLabels } from '@/lib/domain/post';
 
 type Vote = 'still' | 'receded' | null;
 
-/** "Still flooded" / "Receded" votes: one per user, tap again to take it back. */
+/** "Still flooded" / "Receded" (incidents: "still there" / "cleared") votes: one per user, tap again to take it back. */
 export function VoteButtons({
   id,
   still,
   receded,
   myVote,
   signedIn,
+  category,
 }: {
   id: number;
+  category: Category;
   still: number;
   receded: number;
   myVote: Vote;
   signedIn: boolean;
 }) {
   const router = useRouter();
+  const labels = voteLabels(category);
   const [vote, setVote] = useState<Vote>(myVote);
   const [counts, setCounts] = useState({ still, receded });
   const [busy, setBusy] = useState(false);
@@ -29,7 +34,7 @@ export function VoteButtons({
   if (!signedIn)
     return (
       <Link href={`/login?next=/post/${id}`} className="block rounded-2xl bg-fill px-4 py-3 text-center text-[14px] font-semibold text-link">
-        เข้าสู่ระบบเพื่อโหวตว่ายังท่วมหรือลดแล้ว
+        เข้าสู่ระบบเพื่อโหวตว่า{labels.still}หรือ{labels.receded}
       </Link>
     );
 
@@ -69,8 +74,8 @@ export function VoteButtons({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex gap-2">
-        {button('still', 'ยังท่วม', counts.still)}
-        {button('receded', 'ลดแล้ว', counts.receded)}
+        {button('still', labels.still, counts.still)}
+        {button('receded', labels.receded, counts.receded)}
       </div>
       {error && (
         <p role="alert" className="text-center text-[13px] text-danger">

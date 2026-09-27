@@ -1,16 +1,17 @@
-import type { Passability, RoadStatus, StatusTag, Vehicle, WaterLevel } from '../config';
+import type { Category, Passability, RoadStatus, StatusTag, Vehicle, WaterLevel } from '../config';
 import type { LngLat } from './geo';
 
 export type ReportKind = 'area' | 'road';
 export type ReportStatus = 'pending' | 'approved' | 'rejected' | 'hidden' | 'deleted';
 
-/** A flood report as the scoring logic needs it (subset of the `reports` row). */
+/** A post as the scoring logic needs it (subset of the `reports` row). */
 export interface Report {
   id: number;
   kind: ReportKind;
+  category: Category;
   position: LngLat;
   radiusM: number | null; // area posts only
-  waterLevel: WaterLevel;
+  waterLevel: WaterLevel | null; // flood posts only
   statusTags: StatusTag[];
   passability: Partial<Record<Vehicle, Passability>>;
   createdAt: Date;
