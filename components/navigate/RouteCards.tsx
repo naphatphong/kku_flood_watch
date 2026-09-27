@@ -61,6 +61,11 @@ export function RouteCards({ routes, selected, onSelect }: { routes: Route[]; se
               {spots.length > 0 && (
                 <span className="text-[12px] text-secondary">ผ่านจุดที่ผ่านไม่ได้: {[...new Set(spots)].join(', ')}</span>
               )}
+              {r.incidents.length > 0 && (
+                <span className="text-[12px] font-medium text-[#C93400]">
+                  ผ่านจุดเกิดเหตุ: {[...new Set(r.incidents.map((x) => x.label))].join(', ')}
+                </span>
+              )}
             </button>
             {confirming === i && (
               <div role="alertdialog" aria-label="ยืนยันเส้นทาง" className="mt-1.5 rounded-2xl bg-[#FDECEA] p-3 text-[13px] text-[#8A0010]">

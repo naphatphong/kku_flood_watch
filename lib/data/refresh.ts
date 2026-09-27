@@ -1,6 +1,6 @@
 import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Passability, StatusTag, Vehicle, WaterLevel } from '../config';
+import type { Category, Passability, StatusTag, Vehicle, WaterLevel } from '../config';
 import { buildClusters, isFlooded } from '../domain/cluster';
 import { isActive } from '../domain/post';
 import { rainScore } from '../domain/rain';
@@ -12,10 +12,11 @@ import { fetchRain } from './rain';
 interface ActiveRow {
   id: number;
   kind: ReportKind;
+  category: Category;
   lng: number;
   lat: number;
   radius_m: number | null;
-  water_level: WaterLevel;
+  water_level: WaterLevel | null;
   status_tags: StatusTag[];
   passability: Partial<Record<Vehicle, Passability>>;
   created_at: string;
@@ -28,6 +29,7 @@ interface ActiveRow {
 const toReport = (r: ActiveRow): Report => ({
   id: r.id,
   kind: r.kind,
+  category: r.category,
   position: [r.lng, r.lat],
   radiusM: r.radius_m,
   waterLevel: r.water_level,
@@ -74,14 +76,14 @@ export async function recompute(db: SupabaseClient, now = new Date()) {
   const rows = (must(
     await db
       .from('reports')
-      .select('id, kind, lng, lat, radius_m, water_level, status_tags, passability, created_at, last_still_vote_at, still_votes, receded_votes, elevation_m')
+      .select('id, kind, category, lng, lat, radius_m, water_level, status_tags, passability, created_at, last_still_vote_at, still_votes, receded_votes, elevation_m')
       .eq('status', 'approved')
       .or(`created_at.gt.${cutoff},last_still_vote_at.gt.${cutoff}`),
   ) ?? []) as ActiveRow[];
   const reports = rows.map(toReport).filter((r) => isActive(r, now));
 
-  // Flood circles, named after the nearest road.
-  const clusters = buildClusters(reports, score, now);
+  // Flood circles (flood posts only), named after the nearest road.
+  const clusters = buildClusters(reports.filter((r) => r.category === 'flood'), score, now);
   const names = await Promise.all(
     clusters.map(async (c) =>
       isFlooded(c) ? must(await db.rpc('nearest_road_name', { p_lng: c.center[0], p_lat: c.center[1] })) : null,
@@ -108,6 +110,7 @@ export async function recompute(db: SupabaseClient, now = new Date()) {
   );
 
   // Road status: road posts cover their chosen segments, area posts the segments in their circle.
+  // Incident posts count too: closures carry "blocked", the others no passability.
   const roadIds = reports.filter((r) => r.kind === 'road').map((r) => r.id);
   const area = reports.filter((r) => r.kind === 'area');
   const [roadLinks, areaLinks] = await Promise.all([

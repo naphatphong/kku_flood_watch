@@ -148,3 +148,21 @@ begin
   assert (select reverse_cost from public.route_edges(p || '{"vehicle": "car"}') where id = 11) = -1, 'one-way for cars';
   assert (select reverse_cost from public.route_edges(p || '{"vehicle": "walk"}') where id = 11) > 0, 'walkers ignore one-way';
 end $$;
+
+-- Road incident posts carry a category and no water level; flood posts still need one.
+do $$ begin
+  insert into public.reports (id, user_id, kind, category, geom, radius_m, status)
+  select 90, user_id, 'area', 'accident', geom, 20, 'approved' from public.reports where id = 1;
+  begin
+    insert into public.reports (id, user_id, kind, geom, radius_m, status)
+    select 91, user_id, 'area', geom, 20, 'approved' from public.reports where id = 1;
+    assert false, 'flood post without a water level';
+  exception when check_violation then null;
+  end;
+  begin
+    insert into public.reports (id, user_id, kind, category, geom, radius_m, water_level, status)
+    select 92, user_id, 'area', 'accident', geom, 20, 'knee', 'approved' from public.reports where id = 1;
+    assert false, 'incident post with a water level';
+  exception when check_violation then null;
+  end;
+end $$;

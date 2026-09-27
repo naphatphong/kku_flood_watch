@@ -1,7 +1,7 @@
 // Route choice and directions (PLAN §6). The graph search runs in PostGIS/pgRouting
 // (route_candidates); this turns its paths into the route cards, turn list and hand-off links.
-import { MAP, ROUTING, VEHICLES, type RoadStatus, type Vehicle } from '../config';
-import { bearing, distanceM, lineLengthM, pointAlong, type LngLat } from './geo';
+import { INCIDENT_POST, MAP, ROUTING, VEHICLES, type RoadStatus, type Vehicle } from '../config';
+import { bearing, distanceM, distanceToLineM, lineLengthM, pointAlong, type LngLat } from './geo';
 import { insideArea } from './report-input';
 
 export type RouteKind = 'safest' | 'balanced' | 'shortest';
@@ -40,9 +40,15 @@ export interface Route {
   blocked: number;
   risky: number;
   spots: FloodSpot[]; // consecutive hard/blocked segments, for warnings
+  incidents: RouteIncident[]; // accidents, obstacles, road works… on the way, in route order
   coords: LngLat[];
   segments: { id: number; status: RoadStatus; start: number; end: number }[]; // ranges in coords
   steps: RouteStep[];
+}
+
+export interface RouteIncident {
+  label: string;
+  at: LngLat;
 }
 
 export interface RouteQuery {
@@ -140,6 +146,7 @@ export function summarize(path: PathSegment[], vehicle: Vehicle): Omit<Route, 'k
     blocked: path.filter((s) => s.status === 'blocked').length,
     risky: path.filter((s) => s.risky).length,
     spots,
+    incidents: [],
     coords,
     segments,
     steps: buildSteps(path),
@@ -172,6 +179,14 @@ export function pickRoutes(safe: PathSegment[][], plain: PathSegment[] | null, v
   }
   return routes;
 }
+
+/** Incidents within routeWarnM of the route line, in the order the route passes them. */
+export const incidentsAlong = (coords: LngLat[], incidents: RouteIncident[]): RouteIncident[] =>
+  incidents
+    .filter((i) => distanceToLineM(i.at, coords) <= INCIDENT_POST.routeWarnM)
+    .map((i) => ({ i, index: nearestIndex(coords, i.at).index }))
+    .sort((a, b) => a.index - b.index)
+    .map(({ i }) => i);
 
 // ---- Turn list ------------------------------------------------------------------
 

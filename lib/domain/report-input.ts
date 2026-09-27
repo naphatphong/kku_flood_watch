@@ -1,10 +1,13 @@
 import {
+  INCIDENTS,
   MAP,
   POST,
   ROAD_STATUS,
   STATUS_TAGS,
   VEHICLES,
   WATER_LEVELS,
+  type Category,
+  type IncidentCategory,
   type Passability,
   type StatusTag,
   type Vehicle,
@@ -15,10 +18,11 @@ import type { ReportKind } from './types';
 
 export interface ReportInput {
   kind: ReportKind;
+  category: Category;
   position: LngLat; // road posts: replaced by the point halfway along the chosen segments
   radiusM: number | null;
   segmentIds: number[];
-  waterLevel: WaterLevel;
+  waterLevel: WaterLevel | null; // flood posts only
   statusTags: StatusTag[];
   passability: Partial<Record<Vehicle, Passability>>;
   note: string | null;
@@ -35,6 +39,10 @@ const isLngLat = (p: LngLat) => Number.isFinite(p[0]) && Number.isFinite(p[1]) &
 
 export const insideArea = (p: LngLat) => distanceM(p, MAP.center) <= MAP.radiusKm * 1000;
 
+/** Incident posts: closures are "blocked" for every vehicle, the rest leave road status alone. */
+export const incidentPassability = (category: IncidentCategory): Partial<Record<Vehicle, Passability>> =>
+  INCIDENTS[category].blocks ? Object.fromEntries(VEHICLES.map((v) => [v.id, 'blocked' as const])) : {};
+
 /** Validates the report form against lib/config.ts. The server is the source of truth. */
 export function parseReportForm(form: FormData): Result {
   const fail = (error: string): Result => ({ ok: false, error });
@@ -42,15 +50,19 @@ export function parseReportForm(form: FormData): Result {
   const kind = form.get('kind');
   if (kind !== 'area' && kind !== 'road') return fail('เลือกชนิดโพสต์: พื้นที่ หรือ ถนน');
 
-  const waterLevel = form.get('water_level');
-  if (typeof waterLevel !== 'string' || !Object.hasOwn(WATER_LEVELS, waterLevel)) return fail('เลือกระดับน้ำ');
+  const category = String(form.get('category') ?? 'flood');
+  if (category !== 'flood' && !Object.hasOwn(INCIDENTS, category)) return fail('เลือกเรื่องที่จะรายงาน');
+  const flood = category === 'flood';
 
-  const statusTags = [...new Set(list(form.get('status_tags')))];
+  const waterLevel = flood ? form.get('water_level') : null;
+  if (flood && (typeof waterLevel !== 'string' || !Object.hasOwn(WATER_LEVELS, waterLevel))) return fail('เลือกระดับน้ำ');
+
+  const statusTags = flood ? [...new Set(list(form.get('status_tags')))] : [];
   if (statusTags.some((t) => !Object.hasOwn(STATUS_TAGS, t))) return fail('แท็กสถานะไม่ถูกต้อง');
 
   let passability: Record<string, string> = {};
   try {
-    passability = JSON.parse(String(form.get('passability') ?? '{}'));
+    passability = flood ? JSON.parse(String(form.get('passability') ?? '{}')) : incidentPassability(category as IncidentCategory);
   } catch {
     return fail('ข้อมูลการผ่านไม่ถูกต้อง');
   }
@@ -88,10 +100,11 @@ export function parseReportForm(form: FormData): Result {
     ok: true,
     input: {
       kind,
+      category: category as Category,
       position,
       radiusM,
       segmentIds,
-      waterLevel: waterLevel as WaterLevel,
+      waterLevel: waterLevel as WaterLevel | null,
       statusTags: statusTags as StatusTag[],
       passability: passability as Partial<Record<Vehicle, Passability>>,
       note,

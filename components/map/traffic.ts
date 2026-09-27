@@ -4,6 +4,7 @@ import maplibregl, { type ExpressionSpecification, type Map as MapLibreMap } fro
 import { TRAFFIC } from '@/lib/config';
 import type { IncidentDTO } from '@/lib/domain/traffic';
 import { duration } from '@/lib/format';
+import { glyphSvg, iconColor, tomtomIcon } from './incident-icons';
 
 const STORE = 'kfw-traffic';
 export const trafficStored = () => {
@@ -42,15 +43,6 @@ const WIDTH: ExpressionSpecification = ['interpolate', ['linear'], ['zoom'], 11,
 const OFFSET: ExpressionSpecification = ['interpolate', ['linear'], ['zoom'], 11, side(1), 17, side(4)];
 const slowest = TRAFFIC.levels[TRAFFIC.levels.length - 1].below;
 
-const ICON: Record<'closed' | 'works' | 'water' | 'alert', { color: string; svg: string }> = {
-  closed: { color: TRAFFIC.closed.color, svg: '<path d="M7 12h10" stroke-width="3"/>' },
-  works: { color: '#FF9F0A', svg: '<path d="M12 5l6 13H6zM9 13h6"/>' },
-  water: { color: '#0A84FF', svg: '<path d="M5 10c2-2 3-2 5 0s3 2 5 0 3-2 4 0M5 15c2-2 3-2 5 0s3 2 5 0 3-2 4 0"/>' },
-  alert: { color: TRAFFIC.levels[1].color, svg: '<path d="M12 6v7"/><circle cx="12" cy="17" r="0.6"/>' },
-};
-const iconFor = (category: number) =>
-  ICON[category === 7 || category === 8 ? 'closed' : category === 9 ? 'works' : category === 4 || category === 11 ? 'water' : 'alert'];
-
 function details(i: IncidentDTO) {
   // TomTom text is external: set it as text, never as HTML.
   const el = document.createElement('div');
@@ -69,21 +61,22 @@ function details(i: IncidentDTO) {
 }
 
 function pin(i: IncidentDTO) {
-  const { color, svg } = iconFor(i.category);
+  const kind = tomtomIcon(i.category);
   const el = document.createElement('button');
   el.type = 'button';
   el.setAttribute('aria-label', i.label);
   el.className = 'grid size-7 place-items-center rounded-full border-2 border-white shadow-md';
-  el.style.background = color;
-  el.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${svg}</svg>`;
+  el.style.background = iconColor(kind);
+  el.innerHTML = glyphSvg(kind);
   return new maplibregl.Marker({ element: el })
     .setLngLat(i.at)
     .setPopup(new maplibregl.Popup({ offset: 16, closeButton: false, maxWidth: '260px' }).setDOMContent(details(i)));
 }
 
+// Desktop only: on phones the sheet would cover it; the home panel's road legend lists the traffic colors.
 function legend() {
   const el = document.createElement('div');
-  el.className = 'maplibregl-ctrl flex flex-col gap-1 rounded-xl bg-white/90 px-2.5 py-2 text-[11px] text-[#3A3A3C] shadow-md backdrop-blur';
+  el.className = 'maplibregl-ctrl hidden flex-col gap-1 md:flex rounded-xl bg-white/90 px-2.5 py-2 text-[11px] text-[#3A3A3C] shadow-md backdrop-blur';
   const row = (label: string, style: string) =>
     `<span class="flex items-center gap-1.5"><span class="h-[4px] w-4 rounded-full" style="${style}"></span>${label}</span>`;
   el.innerHTML =

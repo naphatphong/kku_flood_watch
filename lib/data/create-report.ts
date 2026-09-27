@@ -104,6 +104,7 @@ export async function createReport(viewer: Viewer, input: ReportInput, photo: Fi
     .insert({
       user_id: viewer.id,
       kind: input.kind,
+      category: input.category,
       geom: `SRID=4326;POINT(${position[0]} ${position[1]})`,
       radius_m: input.radiusM,
       road_length_m: roadLengthM,

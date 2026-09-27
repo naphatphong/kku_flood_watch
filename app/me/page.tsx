@@ -5,7 +5,8 @@ import { ChevronIcon } from '@/components/ui/icons';
 import { PillLink } from '@/components/ui/Pill';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { getViewer } from '@/lib/auth';
-import { WATER_LEVELS, zoneLevel, type WaterLevel } from '@/lib/config';
+import type { Category, WaterLevel } from '@/lib/config';
+import { postLabel, voteLabels } from '@/lib/domain/post';
 import type { ReportStatus } from '@/lib/domain/types';
 import { timeAgo } from '@/lib/format';
 import { createClient } from '@/lib/supabase/server';
@@ -21,7 +22,7 @@ export default async function MyPostsPage() {
 
   const { data: posts } = await (await createClient())
     .from('reports')
-    .select('id, kind, water_level, status, created_at, still_votes, receded_votes')
+    .select('id, kind, category, water_level, status, created_at, still_votes, receded_votes')
     .eq('user_id', viewer.id)
     .order('created_at', { ascending: false })
     .limit(100);
@@ -43,17 +44,19 @@ export default async function MyPostsPage() {
       ) : (
         <ul className="rounded-3xl bg-white/85 px-4 shadow-sm">
           {posts.map((p) => {
-            const water = WATER_LEVELS[p.water_level as WaterLevel];
+            const category = p.category as Category;
+            const head = postLabel({ category, waterLevel: p.water_level as WaterLevel | null });
+            const votes = voteLabels(category);
             return (
               <li key={p.id} className="border-b border-separator last:border-0">
                 <Link href={`/post/${p.id}`} className="flex items-center gap-3 py-3.5">
-                  <span className="size-3 shrink-0 rounded-full" style={{ background: zoneLevel(water.score).color }} />
+                  <span className="size-3 shrink-0 rounded-full" style={{ background: head.color }} />
                   <span className="min-w-0 grow">
                     <span className="block text-[15px] font-semibold">
-                      {water.label} · {p.kind === 'road' ? 'ถนน' : 'พื้นที่'}
+                      {head.label} · {p.kind === 'road' ? 'ถนน' : 'พื้นที่'}
                     </span>
                     <span className="block text-[13px] text-secondary">
-                      {timeAgo(p.created_at)} · ยังท่วม {p.still_votes} · ลดแล้ว {p.receded_votes}
+                      {timeAgo(p.created_at)} · {votes.still} {p.still_votes} · {votes.receded} {p.receded_votes}
                     </span>
                   </span>
                   <StatusChip status={p.status as ReportStatus} />

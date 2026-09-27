@@ -1,6 +1,7 @@
 import 'server-only';
 import type { FeatureCollection } from 'geojson';
-import { POST, type Passability, type StatusTag, type Vehicle, type WaterLevel } from '../config';
+import { POST, type Category, type Passability, type StatusTag, type Vehicle, type WaterLevel } from '../config';
+import { isActive } from '../domain/post';
 import type { ReportKind } from '../domain/types';
 import { rainScore } from '../domain/rain';
 import { watchCircles, type LowSpot } from '../domain/watch';
@@ -12,7 +13,7 @@ import { fetchRain, toRainDTO } from './rain';
 import type { BBox, ClusterDTO, RainDTO, ReportPin, ReportsResponse, WatchDTO, ZonesResponse } from './types';
 
 export const REPORT_COLUMNS =
-  'id, kind, lng, lat, radius_m, water_level, status_tags, passability, note, photo_path, created_at, still_votes, receded_votes';
+  'id, kind, category, lng, lat, radius_m, water_level, status_tags, passability, note, photo_path, created_at, last_still_vote_at, still_votes, receded_votes';
 
 export const photoUrl = (path: string | null) =>
   path ? `${SUPABASE_URL}/storage/v1/object/public/report-photos/${path}` : null;
@@ -20,15 +21,17 @@ export const photoUrl = (path: string | null) =>
 export interface ReportRow {
   id: number;
   kind: ReportKind;
+  category: Category;
   lng: number;
   lat: number;
   radius_m: number | null;
-  water_level: WaterLevel;
+  water_level: WaterLevel | null;
   status_tags: StatusTag[];
   passability: Partial<Record<Vehicle, Passability>>;
   note: string | null;
   photo_path: string | null;
   created_at: string;
+  last_still_vote_at: string | null;
   still_votes: number;
   receded_votes: number;
 }
@@ -36,6 +39,7 @@ export interface ReportRow {
 export const rowToPin = (r: ReportRow): ReportPin => ({
   id: r.id,
   kind: r.kind,
+  category: r.category,
   lng: r.lng,
   lat: r.lat,
   radiusM: r.radius_m,
@@ -49,7 +53,7 @@ export const rowToPin = (r: ReportRow): ReportPin => ({
   recededVotes: r.receded_votes,
 });
 
-/** Posts count until expiryHours after posting or after the latest "still" vote. */
+/** Posts count until expiryHours after posting or after the latest "still" vote (flood posts live longest). */
 export const activeCutoff = (now = new Date()) =>
   new Date(now.getTime() - POST.expiryHours * 3_600_000).toISOString();
 
@@ -138,7 +142,18 @@ export async function getReports([west, south, east, north]: BBox): Promise<Repo
     .order('created_at', { ascending: false })
     .limit(500);
   if (error) throw error;
-  return { reports: data.map(rowToPin), demo: false };
+  const active = (data as ReportRow[]).filter((r) =>
+    isActive(
+      {
+        category: r.category,
+        createdAt: new Date(r.created_at),
+        lastStillVoteAt: r.last_still_vote_at ? new Date(r.last_still_vote_at) : null,
+        votes: { still: r.still_votes, receded: r.receded_votes },
+      },
+      now,
+    ),
+  );
+  return { reports: active.map(rowToPin), demo: false };
 }
 
 /** Road segments with a status inside a bbox (GeoJSON, statuses for every vehicle). */

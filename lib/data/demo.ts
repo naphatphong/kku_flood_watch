@@ -2,10 +2,11 @@
 // "demo" badge. Sample posts sit on real roads; clusters and road colors come from the
 // same domain logic as production, so the demo behaves like the real thing.
 import type { FeatureCollection } from 'geojson';
-import { MAP, VEHICLES, type Passability, type StatusTag, type Vehicle, type WaterLevel } from '../config';
+import { MAP, VEHICLES, type IncidentCategory, type Passability, type StatusTag, type Vehicle, type WaterLevel } from '../config';
 import { buildClusters, isFlooded } from '../domain/cluster';
 import { destination, distanceM, distanceToLineM, type LngLat } from '../domain/geo';
 import { isActive } from '../domain/post';
+import { incidentPassability } from '../domain/report-input';
 import { segmentStatuses } from '../domain/segments';
 import type { Report } from '../domain/types';
 import roads from '../mock-roads.json'; // main roads near KKU, © OpenStreetMap contributors (ODbL)
@@ -26,6 +27,11 @@ const SAMPLES: Sample[] = [
   [2175, 1408, 60, 'dry', ['receding']],
   [1100, 150, 10, 'knee', ['raining']],
   [1150, -150, 35, 'ankle', []],
+];
+
+const INCIDENT_SAMPLES: [dxM: number, dyM: number, minutesAgo: number, category: IncidentCategory][] = [
+  [1650, -1250, 20, 'accident'],
+  [-900, 700, 45, 'roadworks'],
 ];
 
 const PASSABILITY: Record<WaterLevel, Partial<Record<Vehicle, Passability>>> = {
@@ -51,9 +57,24 @@ function snapToRoad(p: LngLat): LngLat {
 }
 
 export function demoReports(now: Date): Report[] {
-  return SAMPLES.map(([dx, dy, minutes, level, tags, still = 0], i) => ({
+  const incidents = INCIDENT_SAMPLES.map(([dx, dy, minutes, category], i): Report => ({
+    id: 100 + i,
+    kind: 'area',
+    category,
+    position: snapToRoad(destination(MAP.center, dx, dy)),
+    radiusM: 30,
+    waterLevel: null,
+    statusTags: [],
+    passability: incidentPassability(category),
+    createdAt: new Date(now.getTime() - minutes * 60_000),
+    lastStillVoteAt: null,
+    votes: { still: 1, receded: 0 },
+    elevationM: null,
+  }));
+  return SAMPLES.map(([dx, dy, minutes, level, tags, still = 0], i): Report => ({
     id: i + 1,
     kind: 'area',
+    category: 'flood',
     position: snapToRoad(destination(MAP.center, dx, dy)),
     radiusM: 60 + ((i * 37) % 120),
     waterLevel: level,
@@ -63,12 +84,13 @@ export function demoReports(now: Date): Report[] {
     lastStillVoteAt: still ? new Date(now.getTime() - 5 * 60_000) : null,
     votes: { still, receded: 0 },
     elevationM: null,
-  }));
+  })).concat(incidents);
 }
 
 export const toPin = (r: Report): ReportPin => ({
   id: r.id,
   kind: r.kind,
+  category: r.category,
   lng: r.position[0],
   lat: r.position[1],
   radiusM: r.radiusM,
@@ -83,7 +105,7 @@ export const toPin = (r: Report): ReportPin => ({
 });
 
 export function demoClusters(now: Date, rainScore: number): ClusterDTO[] {
-  const active = demoReports(now).filter((r) => isActive(r, now));
+  const active = demoReports(now).filter((r) => r.category === 'flood' && isActive(r, now));
   return buildClusters(active, rainScore, now)
     .filter(isFlooded)
     .map((c) => ({

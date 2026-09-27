@@ -150,6 +150,15 @@ where id = (select id from auth.users where email = '<อีเมลของ�
 3. (แนะนำ) ในหน้าคีย์ เปิด **Domain whitelisting** ใส่ `kku-flood-watch.vercel.app` (เซิร์ฟเวอร์ของเว็บส่งโดเมนนี้ไปด้วย จึงใช้ได้ทั้งสองฝั่ง)
 4. Vercel → Environment Variables → `NEXT_PUBLIC_TOMTOM_KEY` = คีย์ (Production + Preview, ปิด Sensitive) → Redeploy
 
+## 7.3 อัปเดตฐานข้อมูลหลังอัปเดตเว็บ
+
+บางครั้งโค้ดใหม่มีไฟล์ใหม่ใน `supabase/migrations/` (เช่น `20260927000800_incidents.sql` สำหรับแจ้งเหตุบนถนน)
+ต้องรันไฟล์ใหม่ **ก่อน** เว็บเวอร์ชันใหม่ขึ้น ไม่งั้นหน้าเว็บจะโหลดข้อมูลไม่ได้ เลือกทางใดทางหนึ่ง:
+
+- สคริปต์ (รันเฉพาะไฟล์ที่ยังไม่เคยรัน ไม่แตะถนนและโพสต์เดิม):
+  `SUPABASE_ACCESS_TOKEN=sbp_... SUPABASE_PROJECT_REF=<Project ref> node scripts/setup-supabase.mjs migrate`
+- หรือ Supabase → **SQL Editor** → วางเนื้อหาไฟล์ใหม่ → Run
+
 ## 8. สิ่งที่ยังรอคุณตัดสินใจ
 
 - **คำต้องห้าม** สำหรับคะแนนสแปม: ใส่ใน `lib/config.ts` → `SPAM.bannedWords` (ตอนนี้ตรวจแค่ลิงก์)

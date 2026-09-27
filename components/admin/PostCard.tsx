@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { StatusChip } from '@/components/ui/StatusChip';
-import { FLAG_REASONS, WATER_LEVELS, zoneLevel } from '@/lib/config';
+import { FLAG_REASONS } from '@/lib/config';
 import { allowedActions, type AdminPost, type ReportAction } from '@/lib/data/admin';
+import { postLabel } from '@/lib/domain/post';
 import { SPAM_REASON_LABELS } from '@/lib/domain/spam';
 import { clock, timeAgo } from '@/lib/format';
 import { ActionButton } from './ActionButton';
@@ -15,15 +16,14 @@ const ACTION_UI: Record<ReportAction, { label: string; tone: 'primary' | 'plain'
 
 /** A post in a review queue: what was posted, why it's here, and the allowed actions. */
 export function PostCard({ post, showUser = true }: { post: AdminPost; showUser?: boolean }) {
-  const water = WATER_LEVELS[post.waterLevel];
-  const level = zoneLevel(water.score);
+  const head = postLabel(post);
   const reasons = post.spamReasons.filter((r) => r !== 'trusted');
   return (
     <article className="flex gap-4 rounded-2xl bg-white/85 p-4 shadow-sm ring-1 ring-separator">
       <div className="flex min-w-0 grow flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full px-2.5 py-0.5 text-[13px] font-bold" style={{ color: level.text, background: `${level.color}1F` }}>
-            {water.label}
+          <span className="rounded-full px-2.5 py-0.5 text-[13px] font-bold" style={{ color: head.text, background: `${head.color}1F` }}>
+            {head.label}
           </span>
           <span className="text-[13px] text-secondary">{post.kind === 'road' ? 'ถนน' : 'พื้นที่'}</span>
           <StatusChip status={post.status} />

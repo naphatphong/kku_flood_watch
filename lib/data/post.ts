@@ -35,9 +35,9 @@ export async function getPost(id: number, viewer: Viewer | null): Promise<PostDe
   const db = await createClient();
   const { data: row } = await db
     .from('reports')
-    .select(`${REPORT_COLUMNS}, status, user_id, road_length_m, last_still_vote_at`)
+    .select(`${REPORT_COLUMNS}, status, user_id, road_length_m`)
     .eq('id', id)
-    .maybeSingle<ReportRow & { status: ReportStatus; user_id: string; road_length_m: number | null; last_still_vote_at: string | null }>();
+    .maybeSingle<ReportRow & { status: ReportStatus; user_id: string; road_length_m: number | null }>();
   if (!row) return null;
 
   const [place, road, vote, flag] = await Promise.all([
@@ -53,7 +53,12 @@ export async function getPost(id: number, viewer: Viewer | null): Promise<PostDe
     status: row.status,
     isOwn: row.user_id === viewer?.id,
     active: isActive(
-      { createdAt: new Date(row.created_at), lastStillVoteAt: row.last_still_vote_at ? new Date(row.last_still_vote_at) : null },
+      {
+        category: row.category,
+        createdAt: new Date(row.created_at),
+        lastStillVoteAt: row.last_still_vote_at ? new Date(row.last_still_vote_at) : null,
+        votes: { still: row.still_votes, receded: row.receded_votes },
+      },
       now,
     ),
     roadLengthM: row.road_length_m,

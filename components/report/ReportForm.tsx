@@ -10,10 +10,13 @@ import { Panel } from '@/components/ui/Panel';
 import { PillButton, PillLink } from '@/components/ui/Pill';
 import { Segmented } from '@/components/ui/Segmented';
 import {
+  INCIDENTS,
   POST,
   STATUS_TAGS,
   WATER_LEVELS,
   zoneLevel,
+  type Category,
+  type IncidentCategory,
   type Passability,
   type StatusTag,
   type Vehicle,
@@ -46,8 +49,14 @@ const toChainSegment = (f: SegmentFeature): ChainSegment => ({
   coords: f.geometry.coordinates,
 });
 
-export function ReportForm({ demo }: { demo: boolean }) {
-  const [kind, setKind] = useState<ReportKind>('area');
+const CATEGORIES: { id: Category; label: string; color: string }[] = [
+  { id: 'flood', label: 'น้ำท่วม', color: '#0071E3' },
+  ...(Object.keys(INCIDENTS) as IncidentCategory[]).map((id) => ({ id, label: INCIDENTS[id].label, color: INCIDENTS[id].color })),
+];
+
+export function ReportForm({ demo, initialCategory }: { demo: boolean; initialCategory: Category }) {
+  const [category, setCategory] = useState<Category>(initialCategory);
+  const [kind, setKind] = useState<ReportKind>(initialCategory === 'closure' ? 'road' : 'area');
   const [pin, setPin] = useState<LngLat | null>(null);
   const [radius, setRadius] = useState(POST.radiusM.default);
   const [chain, setChain] = useState<ChainSegment[]>([]);
@@ -96,8 +105,12 @@ export function ReportForm({ demo }: { demo: boolean }) {
     setRoadHint(null);
   }
 
+  const flood = category === 'flood';
+  const incident = flood ? null : INCIDENTS[category];
+  // Only floods and closures use the circle (road status); other incidents are a point.
+  const usesRadius = flood || !!incident?.blocks;
   const placed = kind === 'area' ? pin !== null : chain.length > 0;
-  const canSubmit = placed && water !== null && !sending && !demo;
+  const canSubmit = placed && (!flood || water !== null) && !sending && !demo;
 
   async function submit() {
     if (!canSubmit) return;
@@ -105,14 +118,17 @@ export function ReportForm({ demo }: { demo: boolean }) {
     setError(null);
     const form = new FormData();
     form.set('kind', kind);
+    form.set('category', category);
     if (kind === 'area' && pin) {
       form.set('lng', String(pin[0]));
       form.set('lat', String(pin[1]));
-      form.set('radius_m', String(radius));
+      form.set('radius_m', String(usesRadius ? radius : POST.radiusM.min));
     } else form.set('segment_ids', chain.map((s) => s.id).join(','));
-    form.set('water_level', water!);
-    form.set('status_tags', tags.join(','));
-    form.set('passability', JSON.stringify(passability));
+    if (flood) {
+      form.set('water_level', water!);
+      form.set('status_tags', tags.join(','));
+      form.set('passability', JSON.stringify(passability));
+    }
     form.set('note', note);
     if (poster) {
       form.set('poster_lng', String(poster[0]));
@@ -136,7 +152,7 @@ export function ReportForm({ demo }: { demo: boolean }) {
       <PickerMap
         kind={kind}
         pin={pin}
-        radiusM={radius}
+        radiusM={usesRadius ? radius : POST.radiusM.min}
         chain={chain}
         candidates={candidates}
         flyTo={flyTo}
@@ -170,13 +186,36 @@ export function ReportForm({ demo }: { demo: boolean }) {
           <Link href="/" aria-label="กลับ" className="grid size-9 place-items-center rounded-full bg-fill hover:bg-fill-strong">
             <ChevronIcon size={16} className="rotate-180" />
           </Link>
-          <h1 className="text-[19px] font-bold tracking-tight">รายงานน้ำท่วม</h1>
+          <h1 className="text-[19px] font-bold tracking-tight">{flood ? 'รายงานน้ำท่วม' : 'แจ้งเหตุบนถนน'}</h1>
         </header>
 
         {done ? (
           <ReportDone id={done.id} status={done.status} />
         ) : (
           <>
+            <Field label="เรื่องที่จะรายงาน">
+              <div className="flex flex-wrap gap-2">
+                {CATEGORIES.map((c) => (
+                  <Chip
+                    key={c.id}
+                    pressed={category === c.id}
+                    tone={c.color}
+                    onClick={() => {
+                      setCategory(c.id);
+                      if (c.id === 'closure' && !chain.length) setKind('road'); // a closure is usually a stretch of road
+                    }}
+                  >
+                    {c.label}
+                  </Chip>
+                ))}
+              </div>
+              {incident?.blocks && (
+                <p className="px-1 text-[13px] text-secondary">
+                  ระบบนำทางจะเลี่ยงถนนที่ปิด จนกว่าโพสต์จะหมดอายุหรือมีคนโหวตว่าเคลียร์แล้ว
+                </p>
+              )}
+            </Field>
+
             <Field label="ชนิดโพสต์">
               <Segmented label="ชนิดโพสต์" options={KINDS} value={kind} onChange={setKind} />
               <p className="flex items-start gap-1.5 px-1 text-[13px] text-secondary">
@@ -184,10 +223,12 @@ export function ReportForm({ demo }: { demo: boolean }) {
                 {kind === 'area'
                   ? pin
                     ? 'แตะแผนที่หรือลากหมุดเพื่อย้ายตำแหน่ง'
-                    : 'แตะแผนที่ตรงจุดที่น้ำท่วม'
+                    : flood
+                      ? 'แตะแผนที่ตรงจุดที่น้ำท่วม'
+                      : 'แตะแผนที่ตรงจุดที่เกิดเหตุ'
                   : chain.length
                     ? `เลือกแล้ว ${chain.length} ท่อน · ${Math.round(chainLengthM(chain))} ม. — แตะท่อนที่ต่อกันเพื่อเพิ่ม แตะท่อนปลายเพื่อเอาออก`
-                    : 'แตะบนถนนที่ท่วม แล้วแตะท่อนที่ต่อกันเพื่อเลือกช่วง'}
+                    : `แตะบนถนนที่${flood ? 'ท่วม' : 'เกิดเหตุ'} แล้วแตะท่อนที่ต่อกันเพื่อเลือกช่วง`}
               </p>
               {roadHint && kind === 'road' && <p className="px-1 text-[13px] text-danger">{roadHint}</p>}
               {gps === 'denied' && (
@@ -197,7 +238,7 @@ export function ReportForm({ demo }: { demo: boolean }) {
               )}
             </Field>
 
-            {kind === 'area' && (
+            {kind === 'area' && usesRadius && (
               <Field label="รัศมี" hint={`${radius} ม.`}>
                 <input
                   type="range"
@@ -212,33 +253,37 @@ export function ReportForm({ demo }: { demo: boolean }) {
               </Field>
             )}
 
-            <Field label="ระดับน้ำ" hint="รายงานว่าแห้งก็ช่วยได้">
-              <div className="flex flex-wrap gap-2">
-                {(Object.entries(WATER_LEVELS) as [WaterLevel, (typeof WATER_LEVELS)[WaterLevel]][]).map(([id, w]) => (
-                  <Chip key={id} pressed={water === id} onClick={() => setWater(id)} tone={zoneLevel(w.score).text}>
-                    {w.label}
-                  </Chip>
-                ))}
-              </div>
-            </Field>
+            {flood && (
+              <>
+                <Field label="ระดับน้ำ" hint="รายงานว่าแห้งก็ช่วยได้">
+                  <div className="flex flex-wrap gap-2">
+                    {(Object.entries(WATER_LEVELS) as [WaterLevel, (typeof WATER_LEVELS)[WaterLevel]][]).map(([id, w]) => (
+                      <Chip key={id} pressed={water === id} onClick={() => setWater(id)} tone={zoneLevel(w.score).text}>
+                        {w.label}
+                      </Chip>
+                    ))}
+                  </div>
+                </Field>
 
-            <Field label="สถานะ" hint="เลือกได้หลายอัน">
-              <div className="flex flex-wrap gap-2">
-                {(Object.entries(STATUS_TAGS) as [StatusTag, (typeof STATUS_TAGS)[StatusTag]][]).map(([id, t]) => (
-                  <Chip
-                    key={id}
-                    pressed={tags.includes(id)}
-                    onClick={() => setTags((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))}
-                  >
-                    {t.label}
-                  </Chip>
-                ))}
-              </div>
-            </Field>
+                <Field label="สถานะ" hint="เลือกได้หลายอัน">
+                  <div className="flex flex-wrap gap-2">
+                    {(Object.entries(STATUS_TAGS) as [StatusTag, (typeof STATUS_TAGS)[StatusTag]][]).map(([id, t]) => (
+                      <Chip
+                        key={id}
+                        pressed={tags.includes(id)}
+                        onClick={() => setTags((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))}
+                      >
+                        {t.label}
+                      </Chip>
+                    ))}
+                  </div>
+                </Field>
 
-            <Field label="รถแต่ละแบบผ่านได้ไหม" hint="ไม่บังคับ แต่ช่วยให้สีถนนแม่นขึ้น">
-              <PassabilityPicker value={passability} onChange={setPassability} />
-            </Field>
+                <Field label="รถแต่ละแบบผ่านได้ไหม" hint="ไม่บังคับ แต่ช่วยให้สีถนนแม่นขึ้น">
+                  <PassabilityPicker value={passability} onChange={setPassability} />
+                </Field>
+              </>
+            )}
 
             <Field label="รูปและข้อความ" hint="ไม่บังคับ ข้อความไม่นำไปคำนวณ">
               <PhotoInput value={photo} onChange={setPhoto} />
@@ -247,7 +292,7 @@ export function ReportForm({ demo }: { demo: boolean }) {
                 onChange={(e) => setNote(e.target.value)}
                 maxLength={POST.noteMaxLength}
                 rows={3}
-                placeholder="เช่น น้ำขึ้นเร็วหน้าร้านสะดวกซื้อ"
+                placeholder={incident?.hint ?? 'เช่น น้ำขึ้นเร็วหน้าร้านสะดวกซื้อ'}
                 className="w-full resize-none rounded-2xl bg-card p-3 text-[15px] shadow-sm outline-none focus:ring-2 focus:ring-accent/40"
               />
             </Field>

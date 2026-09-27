@@ -1,5 +1,5 @@
 // Shapes the API returns and the UI consumes.
-import type { Passability, StatusTag, Vehicle, WaterLevel } from '../config';
+import type { Category, Passability, StatusTag, Vehicle, WaterLevel } from '../config';
 import type { ReportKind } from '../domain/types';
 
 export interface ClusterDTO {
@@ -19,10 +19,11 @@ export interface ClusterDTO {
 export interface ReportPin {
   id: number;
   kind: ReportKind;
+  category: Category;
   lng: number;
   lat: number;
   radiusM: number | null;
-  waterLevel: WaterLevel;
+  waterLevel: WaterLevel | null; // flood posts only
   statusTags: StatusTag[];
   passability: Partial<Record<Vehicle, Passability>>;
   note: string | null;

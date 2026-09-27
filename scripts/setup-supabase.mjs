@@ -4,6 +4,7 @@
 //   export SUPABASE_ACCESS_TOKEN=sbp_...   # supabase.com/dashboard/account/tokens
 //   export SUPABASE_PROJECT_REF=abcd...    # from https://<ref>.supabase.co
 //   node scripts/setup-supabase.mjs db                 # migrations + roads
+//   node scripts/setup-supabase.mjs migrate            # new migrations only (after an update; keeps roads and posts)
 //   node scripts/setup-supabase.mjs auth               # site URL, redirect URLs (+ Google if GOOGLE_CLIENT_ID/SECRET set)
 //   node scripts/setup-supabase.mjs cron               # Vault secrets for the 15-minute refresh (prints CRON_SECRET)
 //   node scripts/setup-supabase.mjs keys               # env values for Vercel
@@ -46,7 +47,7 @@ async function api(method, path, body) {
 const sql = (query) => api('POST', '/database/query', { query });
 const literal = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
-async function db() {
+async function migrate() {
   const dir = join(ROOT, 'supabase/migrations');
   const applied = new Set(((await api('GET', '/database/migrations')) ?? []).map((m) => m.name));
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
@@ -58,6 +59,10 @@ async function db() {
     await api('POST', '/database/migrations', { name, query: readFileSync(join(dir, file), 'utf8') });
     console.log(`✓ ${name}`);
   }
+}
+
+async function db() {
+  await migrate();
 
   // roads.sql is one 4 MB transaction; send its statements in batches (it starts by deleting, so re-runs are safe).
   const statements = [];
@@ -156,7 +161,7 @@ async function check() {
 }
 
 const [cmd, arg] = process.argv.slice(2);
-const commands = { db, auth, cron, keys, refresh, admin, check };
+const commands = { db, migrate, auth, cron, keys, refresh, admin, check };
 if (!commands[cmd]) {
   console.error(`Commands: ${Object.keys(commands).join(', ')}`);
   process.exit(1);
