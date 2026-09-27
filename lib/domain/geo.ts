@@ -32,3 +32,20 @@ export function lineLengthM(line: LngLat[]): number {
   for (let i = 1; i < line.length; i++) total += distanceM(line[i - 1], line[i]);
   return total;
 }
+
+/** Shortest distance in meters from a point to a polyline (local flat approximation). */
+export function distanceToLineM(p: LngLat, line: LngLat[]): number {
+  const kx = (EARTH_RADIUS_M * Math.PI * Math.cos(toRad(p[1]))) / 180;
+  const ky = (EARTH_RADIUS_M * Math.PI) / 180;
+  const xy = ([lng, lat]: LngLat) => [(lng - p[0]) * kx, (lat - p[1]) * ky];
+  let best = Infinity;
+  for (let i = 1; i < line.length; i++) {
+    const [ax, ay] = xy(line[i - 1]);
+    const [bx, by] = xy(line[i]);
+    const dx = bx - ax;
+    const dy = by - ay;
+    const t = dx || dy ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / (dx * dx + dy * dy))) : 0;
+    best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
+  }
+  return best;
+}
