@@ -1,5 +1,6 @@
 import { HomeView } from '@/components/home/HomeView';
+import { getViewer } from '@/lib/auth';
 
-export default function Home() {
-  return <HomeView />;
+export default async function Home() {
+  return <HomeView viewer={await getViewer()} />;
 }

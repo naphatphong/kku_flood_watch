@@ -8,6 +8,13 @@ export const SITE = {
   timeZone: 'Asia/Bangkok',
 };
 
+// Sign-in buttons. LINE is a Supabase custom OAuth provider named `custom:line` (SETUP.md).
+// Set NEXT_PUBLIC_AUTH_PROVIDERS=google,custom:line once each provider is configured.
+export const AUTH_PROVIDERS = (process.env.NEXT_PUBLIC_AUTH_PROVIDERS ?? 'google')
+  .split(',')
+  .map((p) => p.trim())
+  .filter(Boolean);
+
 export const MAP = {
   center: [102.8173, 16.4617] as [number, number], // KKU campus, [lng, lat]
   radiusKm: 5,
