@@ -9,7 +9,7 @@ import { reportsGeoJSON, roadsGeoJSON, zones, zonesGeoJSON } from '@/lib/mock';
 const roadColor = (v: Vehicle) =>
   ['match', ['get', v], ...Object.entries(ROAD_STATUS).flatMap(([k, s]) => [k, s.color]), ROAD_STATUS.unknown.color] as unknown as ExpressionSpecification;
 
-// Report radius is in meters; convert to pixels per zoom level (Web Mercator).
+// Zone and report radii are in meters; convert to pixels per zoom level (Web Mercator).
 const MPP0 = 156543.03 * Math.cos((MAP.center[1] * Math.PI) / 180);
 const RADIUS_PX: ExpressionSpecification = [
   'interpolate', ['exponential', 2], ['zoom'],
@@ -60,16 +60,17 @@ export default function FloodMap({
       m.fitBounds(ALL_BOUNDS, { padding: panelPadding(), duration: 0 });
       m.addSource('zones', { type: 'geojson', data: zonesGeoJSON, promoteId: 'id' });
       m.addLayer({
-        id: 'zones-fill',
-        type: 'fill',
+        id: 'zones',
+        type: 'circle',
         source: 'zones',
-        paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', SELECTED, 0.3, 0.13] },
-      });
-      m.addLayer({
-        id: 'zones-line',
-        type: 'line',
-        source: 'zones',
-        paint: { 'line-color': ['get', 'color'], 'line-opacity': 0.55, 'line-width': ['case', SELECTED, 3, 1] },
+        paint: {
+          'circle-radius': RADIUS_PX,
+          'circle-color': ['get', 'color'],
+          'circle-opacity': ['case', SELECTED, 0.3, 0.16],
+          'circle-stroke-color': ['get', 'color'],
+          'circle-stroke-opacity': 0.7,
+          'circle-stroke-width': ['case', SELECTED, 3, 1.5],
+        },
       });
 
       m.addSource('roads', { type: 'geojson', data: roadsGeoJSON });
@@ -114,19 +115,24 @@ export default function FloodMap({
         type: 'symbol',
         source: 'zones',
         layout: {
-          'text-field': ['concat', ['get', 'id'], '  ', ['to-string', ['get', 'final']], '%'],
+          'text-field': [
+            'format',
+            ['concat', ['to-string', ['get', 'final']], '%'], { 'font-scale': 1.25 },
+            '\n', {},
+            ['concat', ['to-string', ['get', 'points']], ' จุด'], { 'font-scale': 0.85 },
+          ],
           'text-font': ['Noto Sans Bold'],
-          'text-size': 13,
+          'text-size': 14,
         },
         paint: { 'text-color': '#3A3A3C', 'text-halo-color': '#FFFFFF', 'text-halo-width': 1.5 },
       });
 
-      m.on('click', 'zones-fill', (e) => {
+      m.on('click', 'zones', (e) => {
         const id = e.features?.[0]?.id;
         if (id != null) onSelect(String(id));
       });
-      m.on('mouseenter', 'zones-fill', () => (m.getCanvas().style.cursor = 'pointer'));
-      m.on('mouseleave', 'zones-fill', () => (m.getCanvas().style.cursor = ''));
+      m.on('mouseenter', 'zones', () => (m.getCanvas().style.cursor = 'pointer'));
+      m.on('mouseleave', 'zones', () => (m.getCanvas().style.cursor = ''));
     });
 
     map.current = m;
