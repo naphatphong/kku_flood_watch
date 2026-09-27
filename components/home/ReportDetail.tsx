@@ -1,6 +1,6 @@
 import Link from 'next/link';
-import { PASSABILITY_COLORS } from '@/components/ui/colors';
-import { STATUS_TAGS, VEHICLES, WATER_LEVELS, zoneLevel } from '@/lib/config';
+import { PassabilityGrid } from '@/components/ui/PassabilityGrid';
+import { STATUS_TAGS, WATER_LEVELS, zoneLevel } from '@/lib/config';
 import type { ReportPin } from '@/lib/data/types';
 import { timeAgo } from '@/lib/format';
 import { DetailCard } from './DetailCard';
@@ -23,18 +23,8 @@ export function ReportDetail({ report, onClose }: { report: ReportPin; onClose: 
           </span>
         ))}
       </div>
-      <div className="mt-3 grid grid-cols-4 gap-1.5">
-        {VEHICLES.map((v) => {
-          const s = report.passability[v.id];
-          return (
-            <div key={v.id} className="rounded-lg bg-fill/60 px-2 py-1.5 text-xs">
-              <p className="text-secondary">{v.short}</p>
-              <p className="font-semibold" style={{ color: s ? PASSABILITY_COLORS[s].text : undefined }}>
-                {s ? PASSABILITY_COLORS[s].label : '—'}
-              </p>
-            </div>
-          );
-        })}
+      <div className="mt-3">
+        <PassabilityGrid value={report.passability} />
       </div>
       {report.photoUrl && (
         <img src={report.photoUrl} alt="รูปจากผู้รายงาน" className="mt-3 max-h-52 w-full rounded-xl object-cover" />

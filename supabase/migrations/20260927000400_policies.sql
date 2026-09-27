@@ -19,7 +19,6 @@ alter table public.rate_limits enable row level security;
 -- Public map data: anyone can read.
 create policy "public read" on public.road_nodes for select to anon, authenticated using (true);
 create policy "public read" on public.road_segments for select to anon, authenticated using (true);
-create policy "public read" on public.report_road_segments for select to anon, authenticated using (true);
 create policy "public read" on public.rainfall for select to anon, authenticated using (true);
 create policy "public read" on public.flood_clusters for select to anon, authenticated using (true);
 create policy "public read" on public.segment_status for select to anon, authenticated using (true);
@@ -27,6 +26,9 @@ create policy "public read" on public.segment_status for select to anon, authent
 -- Reports: approved ones are public; owners see their own (pending too); admins see all.
 create policy "read approved, own or admin" on public.reports for select to anon, authenticated
   using (status = 'approved' or user_id = auth.uid() or public.is_admin());
+-- A road post's segments are visible with the post (the subquery applies the reports policy).
+create policy "read with report" on public.report_road_segments for select to anon, authenticated
+  using (exists (select 1 from public.reports r where r.id = report_id));
 
 -- Profiles: private to the owner and admins. Owners may only change their display name.
 create policy "read own or admin" on public.profiles for select to authenticated

@@ -131,6 +131,8 @@ export const LIMITS = {
   // Per IP, anonymous endpoints. The plan names no numbers; these are defaults.
   publicApi: { windowSeconds: 60, maxRequests: 120 },
   routeApi: { windowSeconds: 60, maxRequests: 20 },
+  // Per user: every vote or flag triggers a recompute.
+  userActions: { windowSeconds: 60, maxRequests: 20 },
 };
 
 export const SPAM = {

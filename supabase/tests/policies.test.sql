@@ -117,3 +117,12 @@ do $$ declare r jsonb; begin
   r := public.poster_stats('00000000-0000-0000-0000-00000000000b', 30);
   assert (r ->> 'approved')::int = 1 and (r ->> 'rejected')::int = 0, 'poster stats';
 end $$;
+
+-- A post's road links are visible only with the post.
+insert into public.report_road_segments values (1, 10), (2, 11);
+reset request.jwt.claim.sub;
+set role anon;
+do $$ begin
+  assert (select array_agg(report_id) from public.report_road_segments) = array[1::bigint], 'anon sees links of approved posts only';
+end $$;
+reset role;

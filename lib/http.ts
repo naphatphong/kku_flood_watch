@@ -15,12 +15,16 @@ export const errorJson = (status: number, error: string, headers?: HeadersInit) 
 export const PUBLIC_CACHE = { 'Cache-Control': 'public, s-maxage=5, stale-while-revalidate=30' };
 
 /** Per-IP fixed-window limit (PLAN §7). Returns a 429 response when over the limit. */
-export async function rateLimited(req: Request, bucket: keyof Pick<typeof LIMITS, 'publicApi' | 'routeApi'>) {
+export async function rateLimited(
+  req: Request,
+  bucket: keyof Pick<typeof LIMITS, 'publicApi' | 'routeApi' | 'userActions'>,
+  key = clientIp(req),
+) {
   if (!isSupabaseConfigured) return null;
   const { windowSeconds, maxRequests } = LIMITS[bucket];
   try {
     const { data: allowed, error } = await createAdminClient().rpc('rate_limit_hit', {
-      p_key: `${bucket}:${clientIp(req)}`,
+      p_key: `${bucket}:${key}`,
       p_window_seconds: windowSeconds,
       p_max: maxRequests,
     });
