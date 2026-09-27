@@ -8,6 +8,7 @@ import { expiresAt, postScore, postWeight, voteMultiplier } from './post';
 import { rainScore, summarizeRain } from './rain';
 import { insideArea, parseReportForm } from './report-input';
 import { watchCircles } from './watch';
+import { dayAlerts, forecastDays, weatherInfo, type DayInput } from './weather';
 import { blockedAhead, buildSteps, googleMapsUrl, insertVia, nearestIndex, parseRouteQuery, pickRoutes, routeEnds, summarize, type PathSegment } from './route';
 import { chainLengthM, toggleSegment, type ChainSegment } from './road-chain';
 import { segmentStatuses } from './segments';
@@ -343,4 +344,24 @@ test('watch circles: rain × low-lying factor of each spot, not inside reported 
   assert.deepEqual(heavy.map((w) => [w.id, w.pct]), [['low', 65], ['mid', 50], ['high', 30]]);
   assert.deepEqual(watchCircles(spots, 0.25).map((w) => w.id), ['low']); // 33% / 25% / 15%
   assert.deepEqual(watchCircles(spots, 0.5, [{ center: ORIGIN, radiusM: 500 }]).map((w) => w.id), ['mid', 'high']);
+});
+
+test('weather: labels, alerts and per-day rain scores for watch circles', () => {
+  assert.equal(weatherInfo(95).kind, 'storm');
+  assert.equal(weatherInfo(2).label, 'มีเมฆบางส่วน');
+  assert.deepEqual(dayAlerts({ code: 3, rainMm: 5, gustMax: 20, tMax: 33 }), []);
+  assert.deepEqual(
+    dayAlerts({ code: 99, rainMm: 95, gustMax: 80, tMax: 41 }).map((a) => [a.kind, a.severe]),
+    [['rain', true], ['storm', true], ['wind', true], ['heat', false]],
+  );
+
+  const hours = (mm: number[]) => mm.map((rainMm, h) => ({ time: `x${h}`, temp: 30, rainProb: 50, rainMm, code: 61, isDay: true, windKmh: 5, gustKmh: 10 }));
+  const day = (date: string, rainMm: number, hourly = hours([rainMm])): DayInput => ({
+    date, code: 61, tMin: 24, tMax: 31, rainMm, rainProb: 80, windMax: 10, gustMax: 20, uvMax: 8, sunrise: '', sunset: '', hours: hourly,
+  });
+  const days = [day('d1', 12), day('d2', 15), day('d3', 50, hours([0, 20, 20, 5, 5, 0])), day('d4', 0)];
+  const [d3, d4] = forecastDays(days, 'd3');
+  close(d3.rainScore, 0.5 * (45 / 50) + 0.3 * (50 / 90) + 0.2 * (2 / 5)); // wettest 3 h = 45 mm, 2 wet days before
+  assert.equal(d3.alerts[0].kind, 'rain');
+  close(d4.rainScore, 0.2 * (3 / 5)); // dry day after 3 wet days
 });

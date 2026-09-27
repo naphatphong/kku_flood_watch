@@ -26,3 +26,19 @@ export function duration(s: number) {
   const min = Math.max(1, Math.round(s / 60));
   return min < 60 ? `${min} นาที` : `${Math.floor(min / 60)} ชม.${min % 60 ? ` ${min % 60} นาที` : ''}`;
 }
+
+// Fixed names: Node and browsers ship different Thai ICU data ("อังคาร" vs "อ."), which breaks hydration.
+const WEEKDAY = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+const WEEKDAY_LONG = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
+const MONTH = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+const utc = (date: string) => new Date(`${date}T00:00:00Z`);
+
+/** "วันนี้" / "พรุ่งนี้" / "พ." for a local "YYYY-MM-DD". */
+export const dayName = (date: string, today: string) =>
+  date === today ? 'วันนี้' : utc(date).getTime() - utc(today).getTime() === 86_400_000 ? 'พรุ่งนี้' : WEEKDAY[utc(date).getUTCDay()];
+
+/** "วันอังคารที่ 29 กันยายน" */
+export const dayLong = (date: string) => {
+  const d = utc(date);
+  return `วัน${WEEKDAY_LONG[d.getUTCDay()]}ที่ ${d.getUTCDate()} ${MONTH[d.getUTCMonth()]}`;
+};

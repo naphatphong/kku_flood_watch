@@ -24,7 +24,7 @@ import { ZoneList } from './ZoneList';
 const FloodMap = dynamic(() => import('@/components/map/FloodMap'), { ssr: false });
 const VEHICLE_TABS = VEHICLES.map((v) => ({ id: v.id, label: v.short }));
 
-export function HomeView({ viewer }: { viewer: Viewer | null }) {
+export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: string | null }) {
   const { zones, reports, segments, error } = useMapData();
   const [vehicle, setVehicle] = useState<Vehicle>(DEFAULT_VEHICLE);
   const [selection, setSelection] = useState<Selection>(null);
@@ -65,6 +65,13 @@ export function HomeView({ viewer }: { viewer: Viewer | null }) {
           <RoadLegend />
         </div>
 
+        {warning && (
+          <Link href="/weather" className="flex items-center gap-2 rounded-xl bg-[#FFF1CC] px-3 py-2 text-[13px] font-semibold text-[#7A5200]">
+            <span aria-hidden>⚠️</span>
+            <span className="grow">{warning}</span>
+            <span className="shrink-0 font-normal">ดูพยากรณ์ ›</span>
+          </Link>
+        )}
         {error && (
           <p role="alert" className="rounded-xl bg-[#FDECEA] px-3 py-2 text-[13px] text-danger">
             โหลดข้อมูลไม่สำเร็จ ระบบจะลองใหม่อัตโนมัติ

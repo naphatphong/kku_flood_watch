@@ -1,4 +1,5 @@
-import { RainIcon } from '@/components/ui/icons';
+import Link from 'next/link';
+import { ChevronIcon, RainIcon } from '@/components/ui/icons';
 import { clock } from '@/lib/format';
 import type { RainDTO } from '@/lib/data/types';
 
@@ -52,6 +53,10 @@ export function RainCard({ rain }: { rain: RainDTO | null }) {
           </div>
         ))}
       </div>
+      <Link href="/weather" className="mt-2.5 flex items-center justify-between text-[13px] font-semibold text-link">
+        พยากรณ์อากาศ 10 วัน และจุดเฝ้าระวังล่วงหน้า
+        <ChevronIcon size={12} />
+      </Link>
     </section>
   );
 }
