@@ -1,0 +1,2 @@
+# Supabase CLI project config, used by `supabase link` and `supabase db push`.
+project_id = "kku-flood-watch"
