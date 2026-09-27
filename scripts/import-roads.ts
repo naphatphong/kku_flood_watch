@@ -1,0 +1,147 @@
+// Downloads roads around KKU from OpenStreetMap, cuts them into ~50 m segments with a
+// routable node topology (PLAN §4, §6) and writes supabase/seed/roads.sql.
+//
+// Run:   npx tsx scripts/import-roads.ts
+// Load:  psql "$DATABASE_URL" -f supabase/seed/roads.sql   (or paste into the Supabase SQL editor)
+// Env:   OVERPASS_URL (default https://overpass-api.de/api/interpreter)
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { MAP, ROUTING } from '../lib/config';
+import { distanceM, lineLengthM, type LngLat } from '../lib/domain/geo';
+
+const SEGMENT_M = 50;
+const OUT = 'supabase/seed/roads.sql';
+const OVERPASS_URL = process.env.OVERPASS_URL ?? 'https://overpass-api.de/api/interpreter';
+const HIGHWAYS =
+  'trunk|trunk_link|primary|primary_link|secondary|secondary_link|tertiary|tertiary_link|unclassified|residential|living_street|service';
+
+interface OsmNode { type: 'node'; id: number; lat: number; lon: number }
+interface OsmWay { type: 'way'; id: number; nodes: number[]; tags: Record<string, string> }
+
+async function fetchOsm(): Promise<(OsmNode | OsmWay)[]> {
+  const [lng, lat] = MAP.center;
+  const query = `[out:json][timeout:180];
+way(around:${MAP.radiusKm * 1000},${lat},${lng})[highway~"^(${HIGHWAYS})$"][service!~"parking_aisle|driveway"][access!~"^(private|no)$"];
+(._;>;);
+out body qt;`;
+  const res = await fetch(OVERPASS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': 'kku-flood-watch-import' },
+    body: new URLSearchParams({ data: query }),
+  });
+  if (!res.ok) throw new Error(`Overpass ${res.status}: ${(await res.text()).slice(0, 300)}`);
+  return (await res.json()).elements;
+}
+
+/** Point at `d` meters along a polyline. */
+function pointAt(line: LngLat[], d: number): LngLat {
+  for (let i = 1; i < line.length; i++) {
+    const step = distanceM(line[i - 1], line[i]);
+    if (d <= step || i === line.length - 1) {
+      const t = step ? Math.min(1, d / step) : 0;
+      return [line[i - 1][0] + t * (line[i][0] - line[i - 1][0]), line[i - 1][1] + t * (line[i][1] - line[i - 1][1])];
+    }
+    d -= step;
+  }
+  return line[line.length - 1];
+}
+
+/** Sub-polyline between distances a and b (a < b) along a line. */
+function slice(line: LngLat[], a: number, b: number): LngLat[] {
+  const out: LngLat[] = [pointAt(line, a)];
+  let walked = 0;
+  for (let i = 1; i < line.length; i++) {
+    walked += distanceM(line[i - 1], line[i]);
+    if (walked > a && walked < b) out.push(line[i]);
+  }
+  out.push(pointAt(line, b));
+  return out;
+}
+
+function speedKmh(tags: Record<string, string>): number {
+  const posted = parseFloat(tags.maxspeed ?? '');
+  if (posted > 0) return posted;
+  const kind = (tags.highway ?? '').replace(/_link$/, '');
+  return ROUTING.speedKmhByHighway[kind] ?? ROUTING.speedKmhByHighway.default;
+}
+
+async function main() {
+  const elements = await fetchOsm();
+  const coords = new Map<number, LngLat>();
+  const ways: OsmWay[] = [];
+  for (const e of elements) {
+    if (e.type === 'node') coords.set(e.id, [e.lon, e.lat]);
+    else if (e.type === 'way') ways.push(e);
+  }
+
+  // Intersections: nodes shared by several ways, plus way ends. Edges run between them.
+  const uses = new Map<number, number>();
+  for (const w of ways) for (const n of w.nodes) uses.set(n, (uses.get(n) ?? 0) + 1);
+  const isJunction = (n: number, i: number, w: OsmWay) => i === 0 || i === w.nodes.length - 1 || uses.get(n)! > 1;
+
+  const nodes: LngLat[] = []; // index + 1 = node id
+  const osmNodeId = new Map<number, number>();
+  const nodeFor = (osmId: number) => {
+    if (!osmNodeId.has(osmId)) osmNodeId.set(osmId, nodes.push(coords.get(osmId)!));
+    return osmNodeId.get(osmId)!;
+  };
+
+  const rows: string[] = [];
+  let segmentId = 0;
+  for (const w of ways) {
+    const reverse = w.tags.oneway === '-1';
+    const oneway = reverse || ['yes', '1', 'true'].includes(w.tags.oneway) || w.tags.junction === 'roundabout';
+    const refs = reverse ? [...w.nodes].reverse() : w.nodes;
+    const name = w.tags.name ?? w.tags['name:th'] ?? w.tags.ref ?? null;
+    const speed = speedKmh(w.tags);
+
+    let start = 0;
+    for (let i = 1; i < refs.length; i++) {
+      if (!isJunction(refs[i], reverse ? refs.length - 1 - i : i, w)) continue;
+      const line = refs.slice(start, i + 1).map((n) => coords.get(n)!);
+      const length = lineLengthM(line);
+      const pieces = Math.max(1, Math.round(length / SEGMENT_M));
+      let from = nodeFor(refs[start]);
+      for (let p = 0; p < pieces; p++) {
+        const part = slice(line, (length * p) / pieces, (length * (p + 1)) / pieces);
+        const to = p === pieces - 1 ? nodeFor(refs[i]) : nodes.push(part[part.length - 1]);
+        const partLength = lineLengthM(part);
+        if (partLength > 0.5) {
+          const wkt = part.map(([x, y]) => `${x.toFixed(7)} ${y.toFixed(7)}`).join(',');
+          rows.push(
+            `(${++segmentId},${w.id},${name ? `'${name.replace(/'/g, "''")}'` : 'null'},'${w.tags.highway}',${from},${to},` +
+              `${oneway},${partLength.toFixed(1)},${speed},'SRID=4326;LINESTRING(${wkt})')`,
+          );
+        }
+        from = to;
+      }
+      start = i;
+    }
+  }
+
+  const nodeRows = nodes.map(([x, y], i) => `(${i + 1},'SRID=4326;POINT(${x.toFixed(7)} ${y.toFixed(7)})')`);
+  const chunk = (xs: string[], n = 1000) => Array.from({ length: Math.ceil(xs.length / n) }, (_, i) => xs.slice(i * n, (i + 1) * n));
+  const sql = [
+    `-- Generated by scripts/import-roads.ts on ${new Date().toISOString()} from OpenStreetMap (© OSM contributors, ODbL).`,
+    '-- Replaces the road graph. Road statuses are rebuilt by the next refresh.',
+    'begin;',
+    'delete from public.report_road_segments where true;',
+    'delete from public.segment_status where true;',
+    'delete from public.road_segments where true;',
+    'delete from public.road_nodes where true;',
+    ...chunk(nodeRows).map((c) => `insert into public.road_nodes (id, geom) values\n${c.join(',\n')};`),
+    ...chunk(rows).map(
+      (c) =>
+        `insert into public.road_segments (id, osm_way_id, name, highway, source, target, oneway, length_m, speed_kmh, geom) values\n${c.join(',\n')};`,
+    ),
+    'commit;',
+  ].join('\n');
+
+  mkdirSync('supabase/seed', { recursive: true });
+  writeFileSync(OUT, sql + '\n');
+  console.log(`${ways.length} ways → ${segmentId} segments, ${nodes.length} nodes → ${OUT}`);
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
