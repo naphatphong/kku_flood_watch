@@ -1,5 +1,6 @@
 'use client';
 
+import { createMap } from '@/components/map/create-map';
 import maplibregl, { type GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection } from 'geojson';
@@ -52,7 +53,8 @@ export default function PickerMap({
   latest.current = { kind, pin, radiusM, chain, candidates, onPin, onRoadTap };
 
   useEffect(() => {
-    const m = new maplibregl.Map({ container: el.current!, style: MAP.style, center: MAP.center, zoom: 15, attributionControl: false });
+    const m = createMap({ container: el.current!, style: MAP.style, center: MAP.center, zoom: 15, attributionControl: false });
+    if (!m) return; // no WebGL: createMap left a note in the container
     m.addControl(new maplibregl.AttributionControl({ compact: true }), isDesktop() ? 'bottom-right' : 'top-left');
     m.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     m.addControl(new ViewControl(), 'top-right');

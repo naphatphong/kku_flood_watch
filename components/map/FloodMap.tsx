@@ -1,5 +1,6 @@
 'use client';
 
+import { createMap } from './create-map';
 import maplibregl, { type GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection } from 'geojson';
@@ -60,13 +61,14 @@ export default function FloodMap({
 
   // Create the map once.
   useEffect(() => {
-    const m = new maplibregl.Map({
+    const m = createMap({
       container: el.current!,
       style: MAP.style,
       bounds: AREA_BOUNDS,
       fitBoundsOptions: { padding: panelPadding() },
       attributionControl: false,
     });
+    if (!m) return; // no WebGL: createMap left a note in the container
     m.addControl(new maplibregl.AttributionControl({ compact: true }), isDesktop() ? 'bottom-right' : 'top-left');
     m.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     m.addControl(new maplibregl.GeolocateControl({ trackUserLocation: true }), 'top-right');
