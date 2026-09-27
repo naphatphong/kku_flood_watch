@@ -1,13 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
-const REASONS = [
-  ['false', 'ข้อมูลเท็จ'],
-  ['spam', 'สแปม'],
-  ['inappropriate', 'ไม่เหมาะสม'],
-  ['duplicate', 'ซ้ำ'],
-] as const;
+import { FLAG_REASONS } from '@/lib/config';
 
 export function FlagButton({ id, flagged }: { id: number; flagged: boolean }) {
   const [done, setDone] = useState(flagged);
@@ -30,7 +24,7 @@ export function FlagButton({ id, flagged }: { id: number; flagged: boolean }) {
         รีพอร์ตโพสต์นี้
       </summary>
       <div className="mt-2 flex flex-wrap gap-2">
-        {REASONS.map(([value, label]) => (
+        {Object.entries(FLAG_REASONS).map(([value, label]) => (
           <button key={value} type="button" onClick={() => send(value)} className="rounded-full bg-fill px-3.5 py-2 hover:bg-fill-strong">
             {label}
           </button>

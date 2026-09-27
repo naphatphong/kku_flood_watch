@@ -46,8 +46,9 @@ create policy "update own" on public.votes for update to authenticated
   using (user_id = auth.uid()) with check (user_id = auth.uid() and not public.is_banned());
 create policy "delete own" on public.votes for delete to authenticated using (user_id = auth.uid());
 
--- Flags: one per user per post.
-create policy "read own" on public.post_flags for select to authenticated using (user_id = auth.uid());
+-- Flags: one per user per post; admins read them all for the review queue.
+create policy "read own or admin" on public.post_flags for select to authenticated
+  using (user_id = auth.uid() or public.is_admin());
 create policy "insert own" on public.post_flags for insert to authenticated
   with check (user_id = auth.uid() and not public.is_banned());
 
