@@ -126,3 +126,25 @@ do $$ begin
   assert (select array_agg(report_id) from public.report_road_segments) = array[1::bigint], 'anon sees links of approved posts only';
 end $$;
 reset role;
+
+-- Navigation: blocked segments are cut from the safe graph, one-way streets can't be driven backwards.
+do $$ declare
+  p jsonb := '{"vehicle": "motorcycle", "walk_kmh": 5, "hard_factor": 3, "risky_min": 60, "risky_penalty": 0.5, "k": 3}';
+  r jsonb;
+begin
+  assert public.mark_routable_nodes() = 3, 'test nodes form one network';
+  r := public.route_candidates('[[102.8170, 16.4617], [102.8182, 16.4617]]', p);
+  assert (select array_agg((x ->> 'id')::int) from jsonb_array_elements(r -> 'safe' -> 0) x) = array[12],
+    'safe path avoids the blocked segment';
+  assert (select array_agg((x ->> 'id')::int) from jsonb_array_elements(r -> 'plain') x) = array[10, 11],
+    'plain path is the shortest';
+  assert r #>> '{plain,0,status}' = 'blocked', 'plain path reports what it crosses';
+
+  r := public.route_candidates('[[102.8170, 16.4617], [102.8176, 16.4618], [102.8182, 16.4617]]', p || '{"vehicle": "car"}');
+  assert (select array_agg((x ->> 'id')::int) from jsonb_array_elements(r -> 'safe' -> 0) x) = array[10, 11],
+    'route through a via point';
+
+  update public.road_segments set oneway = true where id = 11;
+  assert (select reverse_cost from public.route_edges(p || '{"vehicle": "car"}') where id = 11) = -1, 'one-way for cars';
+  assert (select reverse_cost from public.route_edges(p || '{"vehicle": "walk"}') where id = 11) > 0, 'walkers ignore one-way';
+end $$;

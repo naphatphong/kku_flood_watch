@@ -6,7 +6,7 @@
 // Env:   OVERPASS_URL (default https://overpass-api.de/api/interpreter)
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { MAP, ROUTING } from '../lib/config';
-import { distanceM, lineLengthM, type LngLat } from '../lib/domain/geo';
+import { distanceM, lineLengthM, pointAlong, type LngLat } from '../lib/domain/geo';
 
 const SEGMENT_M = 50;
 const OUT = 'supabase/seed/roads.sql';
@@ -32,28 +32,15 @@ out body qt;`;
   return (await res.json()).elements;
 }
 
-/** Point at `d` meters along a polyline. */
-function pointAt(line: LngLat[], d: number): LngLat {
-  for (let i = 1; i < line.length; i++) {
-    const step = distanceM(line[i - 1], line[i]);
-    if (d <= step || i === line.length - 1) {
-      const t = step ? Math.min(1, d / step) : 0;
-      return [line[i - 1][0] + t * (line[i][0] - line[i - 1][0]), line[i - 1][1] + t * (line[i][1] - line[i - 1][1])];
-    }
-    d -= step;
-  }
-  return line[line.length - 1];
-}
-
 /** Sub-polyline between distances a and b (a < b) along a line. */
 function slice(line: LngLat[], a: number, b: number): LngLat[] {
-  const out: LngLat[] = [pointAt(line, a)];
+  const out: LngLat[] = [pointAlong(line, a)];
   let walked = 0;
   for (let i = 1; i < line.length; i++) {
     walked += distanceM(line[i - 1], line[i]);
     if (walked > a && walked < b) out.push(line[i]);
   }
-  out.push(pointAt(line, b));
+  out.push(pointAlong(line, b));
   return out;
 }
 
@@ -133,6 +120,7 @@ async function main() {
       (c) =>
         `insert into public.road_segments (id, osm_way_id, name, highway, source, target, oneway, length_m, speed_kmh, geom) values\n${c.join(',\n')};`,
     ),
+    'select public.mark_routable_nodes(); -- routes snap to the main connected network',
     'commit;',
   ].join('\n');
 

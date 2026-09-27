@@ -108,7 +108,12 @@ export const ROUTING = {
   costFactor: { ok: 1, unknown: 1, hard: 3 }, // blocked segments are removed
   riskyClusterMin: 60, // segments inside such circles cost +50%
   riskyClusterPenalty: 0.5,
-  walkSpeedKmh: 5,
+  walkSpeedKmh: 5, // walking ignores one-way streets
+  minSavingPct: 5, // "balanced"/"shortest" are shown only if this much faster than the routes before them
+  maxVia: 3, // points added by dragging the route
+  mapsWaypoints: 3, // Google Maps URLs honor 3 waypoints on mobile
+  geocoderUrl: 'https://photon.komoot.io/api/', // place search on OpenStreetMap data, no key needed
+  placeSearchKm: 40, // search places this far around the area (farther ones hand off to Google Maps)
   speedKmhByHighway: {
     trunk: 70,
     primary: 60,

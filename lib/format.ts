@@ -17,3 +17,12 @@ export const clock = (iso: string) =>
   new Date(iso).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: SITE.timeZone });
 
 export const pct = (x: number) => `${Math.round(x)}%`;
+
+/** "850 ม." / "3.2 กม." */
+export const distance = (m: number) => (m < 1000 ? `${Math.round(m / 10) * 10} ม.` : `${(m / 1000).toFixed(1)} กม.`);
+
+/** "12 นาที" / "1 ชม. 5 นาที" */
+export function duration(s: number) {
+  const min = Math.max(1, Math.round(s / 60));
+  return min < 60 ? `${min} นาที` : `${Math.floor(min / 60)} ชม.${min % 60 ? ` ${min % 60} นาที` : ''}`;
+}

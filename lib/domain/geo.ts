@@ -33,6 +33,26 @@ export function lineLengthM(line: LngLat[]): number {
   return total;
 }
 
+/** Initial compass bearing from a to b in degrees, 0 = north, clockwise. */
+export function bearing([lng1, lat1]: LngLat, [lng2, lat2]: LngLat): number {
+  const y = Math.sin(toRad(lng2 - lng1)) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(toRad(lng2 - lng1));
+  return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+/** Point `d` meters along a polyline (clamped to its ends). */
+export function pointAlong(line: LngLat[], d: number): LngLat {
+  for (let i = 1; i < line.length; i++) {
+    const step = distanceM(line[i - 1], line[i]);
+    if (d <= step || i === line.length - 1) {
+      const t = step ? Math.max(0, Math.min(1, d / step)) : 0;
+      return [line[i - 1][0] + t * (line[i][0] - line[i - 1][0]), line[i - 1][1] + t * (line[i][1] - line[i - 1][1])];
+    }
+    d -= step;
+  }
+  return line[line.length - 1];
+}
+
 /** Shortest distance in meters from a point to a polyline (local flat approximation). */
 export function distanceToLineM(p: LngLat, line: LngLat[]): number {
   const kx = (EARTH_RADIUS_M * Math.PI * Math.cos(toRad(p[1]))) / 180;
