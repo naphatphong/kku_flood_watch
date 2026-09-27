@@ -3,6 +3,7 @@ import { ROUTING, type RoadStatus } from '../config';
 import type { LngLat } from '../domain/geo';
 import { pickRoutes, routeEnds, type PathSegment, type Route, type RouteQuery } from '../domain/route';
 import { createAnonClient } from '../supabase/anon';
+import { trafficTime } from './traffic';
 
 interface SegmentRow {
   id: number;
@@ -49,8 +50,12 @@ export async function getRoutes(q: RouteQuery): Promise<RouteResponse> {
 
   const points = data.points as { lng: number; lat: number }[];
   const safe = (data.safe as SegmentRow[][]).map(toPath);
+  const routes = pickRoutes(safe, data.plain ? toPath(data.plain) : null, q.vehicle);
+  // Cards are picked on free-flow time; live traffic then corrects the times shown.
+  const times = await Promise.all(routes.map((r) => trafficTime(r.coords, q.vehicle)));
+  times.forEach((t, i) => t && Object.assign(routes[i], t));
   return {
-    routes: pickRoutes(safe, data.plain ? toPath(data.plain) : null, q.vehicle),
+    routes,
     start: [points[0].lng, points[0].lat],
     end: [points[points.length - 1].lng, points[points.length - 1].lat],
     handoff: ends.handoff,

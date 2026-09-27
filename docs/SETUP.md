@@ -138,6 +138,17 @@ where id = (select id from auth.users where email = '<อีเมลของ�
 1. สมัครที่ https://cloud.maptiler.com/auth/widget?next=https://cloud.maptiler.com/maps/ (แพลน Free)
 2. เมนู **API keys** → คัดลอกคีย์ (Default key) → กดแก้คีย์ → **Allowed HTTP origins** ใส่ `kku-flood-watch.vercel.app` (กันคนอื่นเอาคีย์ไปใช้)
 3. Vercel → Settings → Environment Variables → เพิ่ม `NEXT_PUBLIC_MAPTILER_KEY` = คีย์นั้น (Production + Preview) → Redeploy
+   ปิด **Sensitive** (ตัวแปร `NEXT_PUBLIC_` ถูกส่งไปเบราว์เซอร์ เป็น secret ไม่ได้ Vercel จะขึ้น error `cannot use visibility: secret`)
+
+## 7.2 ข้อมูลรถติด (ไม่บังคับ)
+
+ปุ่มไฟจราจรบนแผนที่ (เส้นรถติด จุดอุบัติเหตุ/ปิดถนน) และเวลาเดินทางตามรถติดในหน้านำทาง ใช้ TomTom
+แพลนฟรี: tile แผนที่ 50,000 ครั้ง/วัน และ API อื่น 2,500 ครั้ง/วัน ไม่ต้องใช้บัตรเครดิต เกินโควตาจะถูกบล็อก ไม่เก็บเงิน
+
+1. สมัครที่ https://developer.tomtom.com → ยืนยันอีเมล
+2. **Dashboard → Keys** → คัดลอกคีย์ (ต้องเปิด Maps, Traffic และ Routing ซึ่งคีย์แรกเปิดไว้ครบ)
+3. (แนะนำ) ในหน้าคีย์ เปิด **Domain whitelisting** ใส่ `kku-flood-watch.vercel.app` (เซิร์ฟเวอร์ของเว็บส่งโดเมนนี้ไปด้วย จึงใช้ได้ทั้งสองฝั่ง)
+4. Vercel → Environment Variables → `NEXT_PUBLIC_TOMTOM_KEY` = คีย์ (Production + Preview, ปิด Sensitive) → Redeploy
 
 ## 8. สิ่งที่ยังรอคุณตัดสินใจ
 

@@ -1,7 +1,8 @@
-// Satellite imagery and 3D buildings for the interactive maps, plus the button pair that
-// switches them. Both sit under the base labels and under our own layers.
+// Satellite imagery and 3D buildings for the interactive maps, plus the map buttons that
+// switch them (and traffic). Both sit under the base labels and under our own layers.
 import type { IControl, Map as MapLibreMap } from 'maplibre-gl';
-import { MAP } from '@/lib/config';
+import { MAP, TRAFFIC } from '@/lib/config';
+import { setTraffic } from './traffic';
 
 const STORE = 'kfw-basemap';
 const load = () => {
@@ -52,11 +53,14 @@ const ICON = {
   satellite:
     '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>',
   map: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg>',
+  traffic:
+    '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2.5" width="8" height="19" rx="4"/><circle cx="12" cy="7" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="17" r="1.3"/></svg>',
 };
 
-/** Map buttons: map ⇄ satellite (when configured) and 2D ⇄ 3D tilt. */
+/** Map buttons: map ⇄ satellite (when configured), traffic on/off (maps with addTraffic) and 2D ⇄ 3D tilt. */
 export class ViewControl implements IControl {
   private el?: HTMLDivElement;
+  constructor(private opts: { traffic?: boolean } = {}) {}
 
   onAdd(map: MapLibreMap) {
     const el = document.createElement('div');
@@ -87,6 +91,19 @@ export class ViewControl implements IControl {
       };
       map.once('idle', paint);
       paint();
+    }
+
+    if (this.opts.traffic && TRAFFIC.flowTiles) {
+      const traffic = button('สภาพจราจร');
+      traffic.innerHTML = ICON.traffic;
+      const on = () => !!map.getLayer('traffic') && map.getLayoutProperty('traffic', 'visibility') !== 'none';
+      const sync = () => traffic.setAttribute('aria-pressed', String(on()));
+      traffic.onclick = () => {
+        if (!map.getLayer('traffic')) return;
+        setTraffic(map, !on());
+        sync();
+      };
+      map.once('idle', sync);
     }
 
     const tilt = button('มุมมอง 3 มิติ');

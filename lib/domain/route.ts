@@ -34,7 +34,8 @@ export interface FloodSpot {
 export interface Route {
   kinds: RouteKind[]; // one path can be both the safest and the shortest
   distanceM: number;
-  durationS: number;
+  durationS: number; // with live traffic when delayS is set
+  delayS: number | null; // traffic delay; null = no traffic data (walking, no key, TomTom down)
   hard: number; // segment counts
   blocked: number;
   risky: number;
@@ -134,6 +135,7 @@ export function summarize(path: PathSegment[], vehicle: Vehicle): Omit<Route, 'k
   return {
     distanceM: Math.round(path.reduce((sum, s) => sum + s.lengthM, 0)),
     durationS: Math.round(path.reduce((sum, s) => sum + s.lengthM / speedMps(s, vehicle), 0)),
+    delayS: null,
     hard: path.filter((s) => s.status === 'hard').length,
     blocked: path.filter((s) => s.status === 'blocked').length,
     risky: path.filter((s) => s.risky).length,

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ChevronIcon } from '@/components/ui/icons';
-import { CLUSTER, LIMITS, MAP, POST, ROAD_STATUS, ROUTING, SCORE, SITE, STATUS_TAGS, WATCH, WATER_LEVELS, ZONE_LEVELS } from '@/lib/config';
+import { CLUSTER, LIMITS, MAP, POST, ROAD_STATUS, ROUTING, SCORE, SITE, STATUS_TAGS, TRAFFIC, WATCH, WATER_LEVELS, ZONE_LEVELS } from '@/lib/config';
 
 export const metadata: Metadata = {
   title: 'วิธีคำนวณและข้อจำกัด',
@@ -146,6 +146,23 @@ export default function AboutPage() {
         </p>
       </Section>
 
+      <Section title="สภาพจราจร">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-[14px]">
+          {[...TRAFFIC.levels].reverse().map((l) => (
+            <Swatch key={l.label} color={l.color} label={l.label} />
+          ))}
+          <Swatch color={TRAFFIC.closed.color} label={TRAFFIC.closed.label} />
+        </div>
+        <p>
+          ปุ่มไฟจราจรบนแผนที่แสดงถนนที่รถวิ่งช้ากว่า {TRAFFIC.levels[TRAFFIC.levels.length - 1].below * 100}% ของความเร็วปกติ
+          ถนนที่ปิด และจุดอุบัติเหตุหรือเหตุบนถนน (อัปเดตทุก {TRAFFIC.incidentsCacheMinutes} นาที) ถนนที่รถไม่ติดไม่ระบายสี
+          เพื่อไม่ให้สับสนกับสีเขียว &quot;ผ่านได้&quot; ของน้ำท่วม
+        </p>
+        <p>
+          การ์ดเส้นทางแสดงเวลาตามสภาพจราจรตอนนี้ และบอกว่าช้ากว่าปกติกี่นาที (ยกเว้นเดินเท้า) เส้นทางยังเลือกจากน้ำท่วมเหมือนเดิม
+        </p>
+      </Section>
+
       <Section title="กันสแปมและความเป็นส่วนตัว">
         <p>
           ต้องล็อกอินก่อนโพสต์ โหวต หรือรีพอร์ต โพสต์ได้ 1 ครั้งทุก {LIMITS.postCooldownMinutes} นาที ไม่เกิน {LIMITS.postsPerDay}{' '}
@@ -164,6 +181,7 @@ export default function AboutPage() {
           <li>ความสูงพื้นดิน: Copernicus DEM ความละเอียด 90 ม. ผ่าน Open-Meteo</li>
           <li>ถนน แผนที่ และความสูงตึก 3 มิติ: © OpenStreetMap contributors (ODbL) แสดงผลด้วย OpenFreeMap · ภาพดาวเทียม: MapTiler</li>
           <li>ค้นหาสถานที่: Photon (ข้อมูล OpenStreetMap)</li>
+          <li>สภาพจราจร อุบัติเหตุ และเวลาเดินทางตามรถติด: © TomTom</li>
         </ul>
       </Section>
 

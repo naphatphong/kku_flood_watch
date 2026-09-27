@@ -4,6 +4,7 @@ import maplibregl, { LngLatBounds, type GeoJSONSource, type MapMouseEvent, type 
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Feature, FeatureCollection } from 'geojson';
 import { addRealism, ViewControl } from '@/components/map/realism';
+import { addTraffic } from '@/components/map/traffic';
 import { useEffect, useMemo, useRef } from 'react';
 import { MAP, ROAD_STATUS, type Vehicle } from '@/lib/config';
 import type { ClusterDTO, WatchDTO } from '@/lib/data/types';
@@ -122,12 +123,13 @@ export default function NavigateMap({
     geo.on('trackuserlocationstart', () => (isTracking.current = true));
     geo.on('trackuserlocationend', () => (isTracking.current = false));
     m.addControl(geo, 'top-right');
-    m.addControl(new ViewControl(), 'top-right');
+    m.addControl(new ViewControl({ traffic: true }), 'top-right');
     geolocate.current = geo;
 
     m.on('load', () => {
       el.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
       addRealism(m);
+      addTraffic(m);
       const d = latest.current.data;
       m.addSource('clusters', { type: 'geojson', data: d.clusters, promoteId: 'id' });
       m.addSource('watch', { type: 'geojson', data: d.watch, promoteId: 'id' });
