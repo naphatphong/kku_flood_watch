@@ -1,0 +1,53 @@
+import Link from 'next/link';
+import { PASSABILITY_COLORS } from '@/components/ui/colors';
+import { STATUS_TAGS, VEHICLES, WATER_LEVELS, zoneLevel } from '@/lib/config';
+import type { ReportPin } from '@/lib/data/types';
+import { timeAgo } from '@/lib/format';
+import { DetailCard } from './DetailCard';
+
+export function ReportDetail({ report, onClose }: { report: ReportPin; onClose: () => void }) {
+  const level = zoneLevel(WATER_LEVELS[report.waterLevel].score);
+  return (
+    <DetailCard title={report.kind === 'road' ? 'รายงานสภาพถนน' : 'รายงานน้ำท่วม'} onClose={onClose}>
+      <p className="text-[13px] text-secondary">
+        {timeAgo(report.createdAt)}
+        {report.radiusM ? ` · รัศมี ${report.radiusM} ม.` : ''}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        <span className="rounded-full px-2.5 py-0.5 text-[13px] font-semibold" style={{ color: level.text, background: `${level.color}1F` }}>
+          {WATER_LEVELS[report.waterLevel].label}
+        </span>
+        {report.statusTags.map((t) => (
+          <span key={t} className="rounded-full bg-fill px-2.5 py-0.5 text-[13px]">
+            {STATUS_TAGS[t].label}
+          </span>
+        ))}
+      </div>
+      <div className="mt-3 grid grid-cols-4 gap-1.5">
+        {VEHICLES.map((v) => {
+          const s = report.passability[v.id];
+          return (
+            <div key={v.id} className="rounded-lg bg-fill/60 px-2 py-1.5 text-xs">
+              <p className="text-secondary">{v.short}</p>
+              <p className="font-semibold" style={{ color: s ? PASSABILITY_COLORS[s].text : undefined }}>
+                {s ? PASSABILITY_COLORS[s].label : '—'}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+      {report.photoUrl && (
+        <img src={report.photoUrl} alt="รูปจากผู้รายงาน" className="mt-3 max-h-52 w-full rounded-xl object-cover" />
+      )}
+      {report.note && <p className="mt-3 text-[14px] leading-relaxed whitespace-pre-line">{report.note}</p>}
+      <div className="mt-3 flex items-center justify-between text-[13px]">
+        <span className="text-secondary">
+          ยังท่วม {report.stillVotes} · ลดแล้ว {report.recededVotes}
+        </span>
+        <Link href={`/post/${report.id}`} className="font-semibold text-link">
+          ดูโพสต์และโหวต
+        </Link>
+      </div>
+    </DetailCard>
+  );
+}
