@@ -36,7 +36,9 @@ export function PlaceField({
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [active, setActive] = useState(0);
 
-  useEffect(() => setText(label(value)), [value]);
+  useEffect(() => {
+    setText(label(value));
+  }, [value]);
 
   // Search as the user types (debounced; stale requests aborted).
   const query = open && text !== label(value) ? text.trim() : '';

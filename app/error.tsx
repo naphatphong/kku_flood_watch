@@ -6,7 +6,9 @@ import { DropIcon } from '@/components/ui/icons';
 
 /** Any page that throws lands here: a way back, plus the technical detail for bug reports. */
 export default function PageError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
-  useEffect(() => console.error(error), [error]);
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
   return (
     <main className="grid min-h-dvh place-items-center p-4">
       <div className="glass w-full max-w-[380px] rounded-[28px] p-7 text-center">
