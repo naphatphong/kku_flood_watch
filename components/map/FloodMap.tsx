@@ -3,6 +3,7 @@
 import maplibregl, { type GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection } from 'geojson';
+import { addRealism, ViewControl } from './realism';
 import { useEffect, useMemo, useRef } from 'react';
 import { MAP, type Vehicle } from '@/lib/config';
 import { destination } from '@/lib/domain/geo';
@@ -65,12 +66,14 @@ export default function FloodMap({
       attributionControl: false,
     });
     m.addControl(new maplibregl.AttributionControl({ compact: true }), isDesktop() ? 'bottom-right' : 'top-left');
-    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    m.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     m.addControl(new maplibregl.GeolocateControl({ trackUserLocation: true }), 'top-right');
+    m.addControl(new ViewControl(), 'top-right');
 
     m.on('load', () => {
       // Compact attribution starts expanded; keep it folded behind its (i) button.
       el.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+      addRealism(m);
       m.addSource('clusters', { type: 'geojson', data: data.current.clusterData, promoteId: 'id' });
       m.addSource('reports', { type: 'geojson', data: data.current.reportData, promoteId: 'id' });
       m.addSource('watch', { type: 'geojson', data: data.current.watchData, promoteId: 'id' });

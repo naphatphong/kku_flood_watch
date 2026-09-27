@@ -3,6 +3,7 @@
 import maplibregl, { LngLatBounds, type GeoJSONSource, type MapMouseEvent, type MapTouchEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Feature, FeatureCollection } from 'geojson';
+import { addRealism, ViewControl } from '@/components/map/realism';
 import { useEffect, useMemo, useRef } from 'react';
 import { MAP, ROAD_STATUS, type Vehicle } from '@/lib/config';
 import type { ClusterDTO, WatchDTO } from '@/lib/data/types';
@@ -111,7 +112,7 @@ export default function NavigateMap({
       attributionControl: false,
     });
     m.addControl(new maplibregl.AttributionControl({ compact: true }), isDesktop() ? 'bottom-right' : 'top-left');
-    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    m.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     const geo = new maplibregl.GeolocateControl({
       trackUserLocation: true,
       positionOptions: { enableHighAccuracy: true },
@@ -121,10 +122,12 @@ export default function NavigateMap({
     geo.on('trackuserlocationstart', () => (isTracking.current = true));
     geo.on('trackuserlocationend', () => (isTracking.current = false));
     m.addControl(geo, 'top-right');
+    m.addControl(new ViewControl(), 'top-right');
     geolocate.current = geo;
 
     m.on('load', () => {
       el.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+      addRealism(m);
       const d = latest.current.data;
       m.addSource('clusters', { type: 'geojson', data: d.clusters, promoteId: 'id' });
       m.addSource('watch', { type: 'geojson', data: d.watch, promoteId: 'id' });

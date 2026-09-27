@@ -135,6 +135,13 @@ https://vercel.com → project **kku-flood-watch** → **Settings → Environmen
 ระวังช่องว่างหรือขึ้นบรรทัดใหม่ติดมาตอนวาง
 จากนั้น **Deployments** → deployment ล่าสุดของ Production → เมนู ⋯ → **Redeploy** → รอจนสถานะ **Ready**
 
+## ขั้น 8.1: ภาพดาวเทียม (ทำเมื่อเจ้าของต้องการ)
+
+1. สมัคร MapTiler แพลน Free ที่ https://cloud.maptiler.com (ให้เจ้าของล็อกอิน/ยืนยันอีเมลเอง)
+2. **API keys** → คีย์ Default → ตั้ง **Allowed HTTP origins** = `kku-flood-watch.vercel.app`
+3. Vercel → Environment Variables → `NEXT_PUBLIC_MAPTILER_KEY` = คีย์ (Production + Preview) → Redeploy
+4. ตรวจ: หน้าแรกมุมขวาบนมีปุ่มรูปลูกโลก กดแล้วเป็นภาพดาวเทียม
+
 ## ขั้น 9: ตรวจว่าใช้งานได้
 
 ```bash

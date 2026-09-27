@@ -15,11 +15,16 @@ export const AUTH_PROVIDERS = (process.env.NEXT_PUBLIC_AUTH_PROVIDERS ?? 'google
   .map((p) => p.trim())
   .filter(Boolean);
 
+const MAPTILER_KEY = process.env.NEXT_PUBLIC_MAPTILER_KEY ?? ''; // free key from maptiler.com (SETUP.md)
+
 export const MAP = {
   center: [102.8173, 16.4617] as [number, number], // KKU campus, [lng, lat]
   radiusKm: 5,
   zoom: 13.4,
   style: 'https://tiles.openfreemap.org/styles/positron',
+  // Satellite imagery (TileJSON); the satellite button only shows when a key is set.
+  satellite: MAPTILER_KEY ? `https://api.maptiler.com/tiles/satellite-v2/tiles.json?key=${MAPTILER_KEY}` : null,
+  pitch3d: 60, // tilt for the 3D button
 };
 
 // ---- Posts (PLAN §4) -------------------------------------------------------

@@ -85,6 +85,7 @@ export const layers = (vehicle: Vehicle): LayerSpecification[] => [
     source: 'clusters',
     paint: {
       'circle-radius': METERS,
+      'circle-pitch-alignment': 'map', // flat on the ground when the map is tilted
       'circle-color': ['get', 'color'],
       'circle-opacity': ['case', SELECTED, 0.3, 0.16],
       'circle-stroke-color': ['get', 'color'],
@@ -113,6 +114,7 @@ export const layers = (vehicle: Vehicle): LayerSpecification[] => [
     filter: ['==', ['get', 'kind'], 'area'],
     paint: {
       'circle-radius': METERS,
+      'circle-pitch-alignment': 'map',
       'circle-color': ['get', 'color'],
       'circle-opacity': 0.12,
       'circle-stroke-color': ['get', 'color'],
