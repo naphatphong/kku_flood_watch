@@ -49,7 +49,9 @@ export function useMapData() {
       timer = setTimeout(load, DEBOUNCE_MS);
     };
     const supabase = createClient();
-    const channel = supabase.channel('map-changes');
+    // Unique per mount: the previous page's channel may still be leaving, and supabase-js
+    // would hand it back already subscribed (adding listeners then throws).
+    const channel = supabase.channel(`map-changes-${Math.random().toString(36).slice(2)}`);
     for (const table of ['flood_clusters', 'reports', 'segment_status'])
       channel.on('postgres_changes', { event: '*', schema: 'public', table }, reload);
     channel.subscribe();
