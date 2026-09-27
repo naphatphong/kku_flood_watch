@@ -98,7 +98,7 @@ export default function Home() {
                 ['ฝน + พื้นที่ต่ำ (base)', `${zone.base}%`],
                 ['จากโพสต์ (report)', zone.c ? `${zone.report}%` : '—'],
                 ['น้ำหนักโพสต์ (c)', zone.c.toFixed(2)],
-                ['โพสต์ที่นับ', `${zone.posts}`],
+                ['จำนวนจุดรายงาน', `${zone.points} จุด`],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between">
                   <dt className="text-secondary">{k}</dt>
@@ -153,7 +153,7 @@ export default function Home() {
         </section>
 
         <section>
-          <h2 className="mb-1.5 px-1 text-[13px] font-semibold text-secondary">โซนเรียงตามความเสี่ยง</h2>
+          <h2 className="mb-1.5 px-1 text-[13px] font-semibold text-secondary">โซนที่มีรายงานน้ำท่วม</h2>
           <ul className="rounded-2xl bg-white/80 px-3 shadow-sm">
             {ranked.map((z) => {
               const l = zoneLevel(z.final);
@@ -169,7 +169,7 @@ export default function Home() {
                     <span className="grow">
                       <span className="block text-[15px] font-semibold">{z.name}</span>
                       <span className="block text-xs text-secondary">
-                        {l.label} · {z.posts} โพสต์
+                        {l.label} · {z.points} จุด
                       </span>
                     </span>
                     <span className="text-[17px] font-bold" style={{ color: l.text }}>{z.final}%</span>
