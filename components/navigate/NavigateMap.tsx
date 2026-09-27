@@ -1,5 +1,6 @@
 'use client';
 
+import { createMap } from '@/components/map/create-map';
 import maplibregl, { LngLatBounds, type GeoJSONSource, type MapMouseEvent, type MapTouchEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Feature, FeatureCollection } from 'geojson';
@@ -105,13 +106,14 @@ export default function NavigateMap({
   latest.current = { data, route, vias, onMapTap, onSelectRoute, onViasChange, onPosition };
 
   useEffect(() => {
-    const m = new maplibregl.Map({
+    const m = createMap({
       container: el.current!,
       style: MAP.style,
       bounds: AREA_BOUNDS,
       fitBoundsOptions: { padding: panelPadding() },
       attributionControl: false,
     });
+    if (!m) return; // no WebGL: createMap left a note in the container
     m.addControl(new maplibregl.AttributionControl({ compact: true }), isDesktop() ? 'bottom-right' : 'top-left');
     m.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     const geo = new maplibregl.GeolocateControl({

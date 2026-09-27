@@ -1,5 +1,6 @@
 'use client';
 
+import { createMap } from './create-map';
 import maplibregl, { LngLatBounds } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useRef } from 'react';
@@ -25,7 +26,7 @@ export default function MiniMap({
     const r = lines.length ? 60 : Math.max(120, radiusM ?? 0) * 1.6;
     const bounds = new LngLatBounds(destination([lng, lat], -r, -r), destination([lng, lat], r, r));
     lines.flat().forEach((p) => bounds.extend(p));
-    const m = new maplibregl.Map({
+    const m = createMap({
       container: el.current!,
       style: MAP.style,
       bounds,
@@ -33,6 +34,7 @@ export default function MiniMap({
       interactive: false,
       attributionControl: { compact: true },
     });
+    if (!m) return; // no WebGL: createMap left a note in the container
     m.on('load', () => {
       // Compact attribution starts expanded; a static map never collapses it, so start closed.
       el.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');

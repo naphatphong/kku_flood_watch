@@ -1,5 +1,6 @@
 'use client';
 
+import { createMap } from '@/components/map/create-map';
 import maplibregl, { type GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useRef } from 'react';
@@ -19,7 +20,8 @@ export default function WatchMap({ watch }: { watch: WatchDTO[] }) {
   latest.current = watch;
 
   useEffect(() => {
-    const m = new maplibregl.Map({ container: el.current!, style: MAP.style, bounds: BOUNDS, attributionControl: { compact: true } });
+    const m = createMap({ container: el.current!, style: MAP.style, bounds: BOUNDS, attributionControl: { compact: true } });
+    if (!m) return; // no WebGL: createMap left a note in the container
     m.on('load', () => {
       el.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
       m.addSource('watch', { type: 'geojson', data: watchToGeoJSON(latest.current), promoteId: 'id' });
