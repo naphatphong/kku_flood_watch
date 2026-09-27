@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"Always apply these skills on this prompt: anthropic-skills:skill-router (say the route line first), anthropic-skills:caveman (terse replies, user language), anthropic-skills:ponytail (minimal code). Load any not yet loaded this session via the Skill tool.\"}}'"
+          }
+        ]
+      }
+    ]
+  }
+}
