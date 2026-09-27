@@ -162,7 +162,7 @@ export default function AboutPage() {
           <li>รายงานน้ำท่วมจากผู้ใช้เว็บนี้</li>
           <li>ฝนรายชั่วโมง พยากรณ์อากาศ 10 วัน และคำเตือน: Open-Meteo (ใช้จุดกลาง มข.) คำเตือนคิดจากเกณฑ์ใน WEATHER ของ lib/config.ts ไม่ใช่ประกาศของกรมอุตุนิยมวิทยา</li>
           <li>ความสูงพื้นดิน: Copernicus DEM ความละเอียด 90 ม. ผ่าน Open-Meteo</li>
-          <li>ถนนและแผนที่: © OpenStreetMap contributors (ODbL) แสดงผลด้วย OpenFreeMap</li>
+          <li>ถนน แผนที่ และความสูงตึก 3 มิติ: © OpenStreetMap contributors (ODbL) แสดงผลด้วย OpenFreeMap · ภาพดาวเทียม: MapTiler</li>
           <li>ค้นหาสถานที่: Photon (ข้อมูล OpenStreetMap)</li>
         </ul>
       </Section>

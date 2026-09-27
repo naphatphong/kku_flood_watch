@@ -3,6 +3,7 @@
 import maplibregl, { type GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection } from 'geojson';
+import { addRealism, ViewControl } from '@/components/map/realism';
 import { useEffect, useRef } from 'react';
 import { MAP } from '@/lib/config';
 import type { LngLat } from '@/lib/domain/geo';
@@ -53,7 +54,8 @@ export default function PickerMap({
   useEffect(() => {
     const m = new maplibregl.Map({ container: el.current!, style: MAP.style, center: MAP.center, zoom: 15, attributionControl: false });
     m.addControl(new maplibregl.AttributionControl({ compact: true }), isDesktop() ? 'bottom-right' : 'top-left');
-    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    m.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
+    m.addControl(new ViewControl(), 'top-right');
     const pinMarker = new maplibregl.Marker({ color: '#0071E3', draggable: true });
     pinMarker.on('dragend', () => {
       const { lng, lat } = pinMarker.getLngLat();
@@ -63,6 +65,7 @@ export default function PickerMap({
 
     m.on('load', () => {
       el.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
+      addRealism(m);
       const { pin: p, radiusM: r, chain: c, candidates: cand } = latest.current;
       m.addSource('pin', { type: 'geojson', data: point(p, r) });
       m.addSource('candidates', { type: 'geojson', data: lines(cand) });
@@ -73,6 +76,7 @@ export default function PickerMap({
         source: 'pin',
         paint: {
           'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 0, ['/', ['get', 'radius_m'], MPP0], 22, ['/', ['get', 'radius_m'], MPP0 / 2 ** 22]],
+          'circle-pitch-alignment': 'map',
           'circle-color': '#0071E3',
           'circle-opacity': 0.14,
           'circle-stroke-color': '#0071E3',

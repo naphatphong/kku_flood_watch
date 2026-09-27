@@ -131,6 +131,14 @@ where id = (select id from auth.users where email = '<อีเมลของ�
 
 3. รีเฟรชเว็บ เมนูบัญชีจะมี **แอดมิน** (หน้า `/admin`)
 
+## 7.1 ภาพถ่ายดาวเทียม (ไม่บังคับ)
+
+ปุ่มสลับภาพดาวเทียมบนแผนที่จะขึ้นเมื่อใส่คีย์ MapTiler (ฟรีสำหรับเว็บไม่แสวงกำไร)
+
+1. สมัครที่ https://cloud.maptiler.com/auth/widget?next=https://cloud.maptiler.com/maps/ (แพลน Free)
+2. เมนู **API keys** → คัดลอกคีย์ (Default key) → กดแก้คีย์ → **Allowed HTTP origins** ใส่ `kku-flood-watch.vercel.app` (กันคนอื่นเอาคีย์ไปใช้)
+3. Vercel → Settings → Environment Variables → เพิ่ม `NEXT_PUBLIC_MAPTILER_KEY` = คีย์นั้น (Production + Preview) → Redeploy
+
 ## 8. สิ่งที่ยังรอคุณตัดสินใจ
 
 - **คำต้องห้าม** สำหรับคะแนนสแปม: ใส่ใน `lib/config.ts` → `SPAM.bannedWords` (ตอนนี้ตรวจแค่ลิงก์)

@@ -76,3 +76,8 @@ body {
     top: 132px;
   }
 }
+
+/* Pressed map buttons (3D on). */
+.maplibregl-ctrl-group button[aria-pressed='true'] {
+  color: #0071e3;
+}
