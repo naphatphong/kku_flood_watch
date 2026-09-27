@@ -27,6 +27,42 @@ export const MAP = {
   pitch3d: 60, // tilt for the 3D button
 };
 
+// Live traffic (owner request, 27 Sep 2026): TomTom flow tiles, incidents and traffic-aware
+// travel times. Everything traffic is hidden until a key is set (SETUP.md 7.2).
+const TOMTOM_KEY = process.env.NEXT_PUBLIC_TOMTOM_KEY ?? '';
+
+export const TRAFFIC = {
+  key: TOMTOM_KEY,
+  flowTiles: TOMTOM_KEY
+    ? `https://api.tomtom.com/traffic/map/4/tile/flow/relative/{z}/{x}/{y}.pbf?key=${TOMTOM_KEY}&tags=[traffic_level,traffic_road_coverage,left_hand_traffic,road_closure]`
+    : null,
+  // Speed as a share of the free-flow speed. Faster roads are not drawn (green is flood "ok").
+  levels: [
+    { below: 0.25, label: 'ติดหนัก', color: '#8E1B24' },
+    { below: 0.5, label: 'ติด', color: '#E8453C' },
+    { below: 0.75, label: 'ช้า', color: '#FF9F0A' },
+  ],
+  closed: { label: 'ปิดถนน', color: '#1D1D1F' },
+  incidentsCacheMinutes: 5, // one TomTom call per this many minutes, shared by every visitor
+  delayChipMinutes: 1, // route cards show "รถติด +N นาที" from this delay up
+  // TomTom iconCategory → Thai label
+  incidentLabels: {
+    0: 'เหตุบนถนน',
+    1: 'อุบัติเหตุ',
+    2: 'หมอกลงจัด',
+    3: 'สภาพถนนอันตราย',
+    4: 'ฝนตกหนัก',
+    5: 'ถนนลื่น',
+    6: 'รถติด',
+    7: 'ปิดช่องจราจร',
+    8: 'ปิดถนน',
+    9: 'ซ่อมถนน',
+    10: 'ลมแรง',
+    11: 'น้ำท่วม',
+    14: 'รถเสีย',
+  } as Record<number, string>,
+};
+
 // ---- Posts (PLAN §4) -------------------------------------------------------
 
 export const VEHICLES = [

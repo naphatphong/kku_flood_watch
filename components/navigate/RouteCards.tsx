@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { ROAD_STATUS } from '@/lib/config';
+import { ROAD_STATUS, TRAFFIC } from '@/lib/config';
 import type { Route, RouteKind } from '@/lib/domain/route';
 import { distance, duration } from '@/lib/format';
 
@@ -45,6 +45,11 @@ export function RouteCards({ routes, selected, onSelect }: { routes: Route[]; se
             >
               <span className="flex items-baseline gap-2">
                 <span className="grow text-[15px] font-semibold">{title(r)}</span>
+                {r.delayS !== null && r.delayS >= TRAFFIC.delayChipMinutes * 60 && (
+                  <span className="rounded-full bg-[#FF9F0A]/15 px-2 py-0.5 text-[12px] font-semibold text-[#C93400]">
+                    รถติด +{duration(r.delayS)}
+                  </span>
+                )}
                 <span className="text-[17px] font-bold tracking-tight">{duration(r.durationS)}</span>
               </span>
               <span className="flex items-center gap-2">

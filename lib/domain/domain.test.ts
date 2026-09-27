@@ -13,6 +13,7 @@ import { blockedAhead, buildSteps, googleMapsUrl, insertVia, nearestIndex, parse
 import { chainLengthM, toggleSegment, type ChainSegment } from './road-chain';
 import { segmentStatuses } from './segments';
 import { spamCheck } from './spam';
+import { parseIncidents } from './traffic';
 import type { Report } from './types';
 
 const NOW = new Date('2026-09-27T07:00:00Z'); // 14:00 in Bangkok
@@ -364,4 +365,19 @@ test('weather: labels, alerts and per-day rain scores for watch circles', () => 
   close(d3.rainScore, 0.5 * (45 / 50) + 0.3 * (50 / 90) + 0.2 * (2 / 5)); // wettest 3 h = 45 mm, 2 wet days before
   assert.equal(d3.alerts[0].kind, 'rain');
   close(d4.rainScore, 0.2 * (3 / 5)); // dry day after 3 wet days
+});
+
+test('traffic incidents: Thai label, start point, place and delay', () => {
+  const [line, point] = parseIncidents({
+    incidents: [
+      {
+        geometry: { type: 'LineString', coordinates: [[102.8, 16.4], [102.81, 16.41]] },
+        properties: { id: 'a', iconCategory: 8, events: [{ description: 'ปิด' }, { description: 'ปิด' }], from: 'A', to: 'B', delay: 300 },
+      },
+      { geometry: { type: 'Point', coordinates: [102.82, 16.42] }, properties: { id: 'b', iconCategory: 13, roadNumbers: ['2'] } },
+    ],
+  });
+  assert.deepEqual(line, { id: 'a', category: 8, label: 'ปิดถนน', text: 'ปิด', road: 'A → B', delayS: 300, at: [102.8, 16.4] });
+  assert.deepEqual(point, { id: 'b', category: 13, label: 'เหตุบนถนน', text: 'เหตุบนถนน', road: '2', delayS: null, at: [102.82, 16.42] });
+  assert.deepEqual(parseIncidents({}), []);
 });
