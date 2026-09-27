@@ -3,6 +3,8 @@
 ตอนนี้เว็บบน Vercel ยังเป็น **โหมดข้อมูลตัวอย่าง** (ขึ้นป้าย "ข้อมูลตัวอย่าง") เพราะยังไม่ได้ต่อฐานข้อมูล
 ทำตามขั้นตอนนี้ครั้งเดียว เว็บจะใช้ข้อมูลจริงทั้งหมด: โพสต์ โหวต ล็อกอิน นำทาง แอดมิน และอัปเดตฝนทุก 15 นาที
 
+> **ให้ Cowork ทำแทน:** สั่ง Cowork ว่า "ทำตามคู่มือ https://github.com/naphatphong/kku_flood_watch/blob/main/docs/COWORK.md" (มีขั้นตอน + สคริปต์ครบ)
+
 ใช้เวลาประมาณ 30–45 นาที สิ่งที่ต้องมี: บัญชี Supabase, บัญชี Vercel (มีอยู่แล้ว), Google Cloud Console และ LINE Developers (ถ้าจะเปิดล็อกอิน LINE)
 
 ---
@@ -16,7 +18,16 @@
 
 ## 2. สร้างตารางและฟังก์ชัน (migrations)
 
-บนเครื่องที่มีโค้ดโปรเจกต์นี้ (ต้องมี Node.js):
+**ทางลัด (แนะนำ):** ขั้น 2–3 ทำด้วยคำสั่งเดียว ใช้แค่ Node.js ไม่ต้องมี psql
+(สร้าง access token ที่ https://supabase.com/dashboard/account/tokens)
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_... SUPABASE_PROJECT_REF=<Project ref> node scripts/setup-supabase.mjs db
+```
+
+สคริปต์เดียวกันยังตั้งค่า Auth, Vault, แอดมิน และดึงคีย์ให้ได้ ดูคำสั่งทั้งหมดที่หัวไฟล์ `scripts/setup-supabase.mjs`
+
+หรือใช้ Supabase CLI บนเครื่องที่มีโค้ดโปรเจกต์นี้:
 
 ```bash
 npx supabase login
