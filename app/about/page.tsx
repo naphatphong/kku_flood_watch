@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { ChevronIcon } from '@/components/ui/icons';
-import { CLUSTER, LIMITS, MAP, POST, ROAD_STATUS, ROUTING, SCORE, SITE, STATUS_TAGS, WATER_LEVELS, ZONE_LEVELS } from '@/lib/config';
+import { CLUSTER, LIMITS, MAP, POST, ROAD_STATUS, ROUTING, SCORE, SITE, STATUS_TAGS, WATCH, WATER_LEVELS, ZONE_LEVELS } from '@/lib/config';
 
 export const metadata: Metadata = {
   title: 'วิธีคำนวณและข้อจำกัด',
@@ -83,6 +83,17 @@ export default function AboutPage() {
         <p className="text-[14px] text-secondary">คำนวณใหม่ทุก {SCORE.refreshMinutes} นาที และทันทีที่มีโพสต์หรือโหวตใหม่</p>
       </Section>
 
+      <Section title="วงเฝ้าระวัง (เส้นประ)">
+        <p>
+          แอ่งที่ต่ำกว่าพื้นที่รอบข้าง (ในระยะ {WATCH.neighbourM} ม.) อย่างน้อย {WATCH.pocketDepthM} ม. คือที่ที่น้ำฝนมักไหลมารวม
+          ระบบคิด % ของแต่ละแอ่งด้วยสูตรเดียวกับขั้น 1–2 ด้านบน (ฝน × ความต่ำของพื้นที่) และแสดงเป็นวงเส้นประเมื่อถึง {WATCH.minPct}%
+          ขึ้นไป ถึงยังไม่มีใครโพสต์ก็ตาม
+        </p>
+        <p className="text-[14px] text-secondary">
+          วงเฝ้าระวังเป็นการคาดการณ์ ไม่ใช่รายงาน ถ้ามีโพสต์ในบริเวณนั้นแล้ว จะแสดงวงจากโพสต์แทน และยังไม่นำไปคิดในการนำทาง
+        </p>
+      </Section>
+
       <Section title="คะแนนของโพสต์">
         <ul className="flex flex-col gap-1 text-[14px]">
           {Object.values(WATER_LEVELS).map((w) => (
@@ -156,7 +167,7 @@ export default function AboutPage() {
         <ul className="flex list-disc flex-col gap-1 pl-5 text-[14px]">
           <li>ข้อมูลมาจากคนในพื้นที่ อาจผิด ช้า หรือไม่ครบ จุดที่ไม่มีคนรายงานไม่ได้แปลว่าไม่ท่วม</li>
           <li>% เป็นค่าประมาณจากกฎง่าย ๆ ไม่ใช่การพยากรณ์ และไม่ใช่ประกาศทางการ</li>
-          <li>ความสูงพื้นดินละเอียด 90 ม. บอกได้แค่ภาพกว้าง ไม่เห็นแอ่งเล็ก ๆ</li>
+          <li>ความสูงพื้นดินละเอียด 90 ม. และรวมความสูงของตึกกับต้นไม้ บอกได้แค่ภาพกว้าง ลานโล่งอาจดูเป็นแอ่ง และไม่เห็นแอ่งเล็ก ๆ</li>
           <li>ข้อมูลถนนจาก OpenStreetMap อาจขาดซอยหรือทิศวันเวย์บางเส้น</li>
           <li>อย่าขับหรือเดินลุยน้ำที่มองไม่เห็นพื้นถนน และติดตามประกาศจากหน่วยงานในพื้นที่เสมอ</li>
         </ul>

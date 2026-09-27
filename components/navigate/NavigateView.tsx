@@ -194,6 +194,7 @@ export function NavigateView({ demo }: { demo: boolean }) {
     <main data-navigating={navigating || undefined} className="relative h-dvh overflow-hidden">
       <NavigateMap
         clusters={zones?.clusters ?? []}
+        watch={zones?.watch ?? []}
         segments={segments}
         vehicle={vehicle}
         routes={routes}

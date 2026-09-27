@@ -7,6 +7,7 @@ import { destination, distanceM, type LngLat } from './geo';
 import { expiresAt, postScore, postWeight, voteMultiplier } from './post';
 import { rainScore, summarizeRain } from './rain';
 import { insideArea, parseReportForm } from './report-input';
+import { watchCircles } from './watch';
 import { blockedAhead, buildSteps, googleMapsUrl, insertVia, nearestIndex, parseRouteQuery, pickRoutes, routeEnds, summarize, type PathSegment } from './route';
 import { chainLengthM, toggleSegment, type ChainSegment } from './road-chain';
 import { segmentStatuses } from './segments';
@@ -331,4 +332,15 @@ test('progress and newly blocked roads ahead', () => {
   const v1 = destination(ORIGIN, 250, 50);
   const v2 = destination(ORIGIN, 60, -40);
   assert.deepEqual(insertVia([v1], route.coords, v2, 1), [v2, v1]); // grabbed before v1 on the route
+});
+
+test('watch circles: rain × low-lying factor of each spot, not inside reported circles', () => {
+  const [t1, t2] = SCORE.elevationTercilesM;
+  const spot = (id: string, elevationM: number, center = ORIGIN) => ({ id, name: null, center, radiusM: 400, elevationM });
+  const spots = [spot('high', t2 + 5, destination(ORIGIN, 3000, 0)), spot('low', t1 - 5), spot('mid', (t1 + t2) / 2, destination(ORIGIN, 0, 3000))];
+  assert.deepEqual(watchCircles(spots, 0), []); // dry: nothing
+  const heavy = watchCircles(spots, 0.5); // low 65%, mid 50%, high 30%
+  assert.deepEqual(heavy.map((w) => [w.id, w.pct]), [['low', 65], ['mid', 50], ['high', 30]]);
+  assert.deepEqual(watchCircles(spots, 0.25).map((w) => w.id), ['low']); // 33% / 25% / 15%
+  assert.deepEqual(watchCircles(spots, 0.5, [{ center: ORIGIN, radiusM: 500 }]).map((w) => w.id), ['mid', 'high']);
 });

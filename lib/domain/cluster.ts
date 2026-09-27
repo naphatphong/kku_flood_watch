@@ -1,26 +1,26 @@
 import { CLUSTER, SCORE } from '../config';
-import { centroid, distanceM } from './geo';
+import { centroid, distanceM, type LngLat } from './geo';
 import { postScore, postWeight } from './post';
 import type { Cluster, Report } from './types';
 
 const round = (x: number, digits = 1) => Math.round(x * 10 ** digits) / 10 ** digits;
 
 /**
- * DBSCAN with minPts = 1: reports chained within CLUSTER.epsM share a group.
- * ponytail: O(n²) neighbour scan, fine for a few hundred active posts; move to PostGIS ST_ClusterDBSCAN beyond that.
+ * DBSCAN with minPts = 1: items chained within `epsM` share a group.
+ * ponytail: O(n²) neighbour scan, fine for a few hundred points; move to PostGIS ST_ClusterDBSCAN beyond that.
  */
-export function groupReports(reports: Report[]): Report[][] {
-  const groups: Report[][] = [];
-  const seen = new Set<number>();
-  for (const start of reports) {
-    if (seen.has(start.id)) continue;
+export function groupNear<T>(items: T[], position: (t: T) => LngLat, epsM: number): T[][] {
+  const groups: T[][] = [];
+  const seen = new Set<T>();
+  for (const start of items) {
+    if (seen.has(start)) continue;
     const group = [start];
-    seen.add(start.id);
+    seen.add(start);
     for (let k = 0; k < group.length; k++) {
-      for (const r of reports) {
-        if (!seen.has(r.id) && distanceM(group[k].position, r.position) <= CLUSTER.epsM) {
-          seen.add(r.id);
-          group.push(r);
+      for (const t of items) {
+        if (!seen.has(t) && distanceM(position(group[k]), position(t)) <= epsM) {
+          seen.add(t);
+          group.push(t);
         }
       }
     }
@@ -28,6 +28,8 @@ export function groupReports(reports: Report[]): Report[][] {
   }
   return groups;
 }
+
+export const groupReports = (reports: Report[]) => groupNear(reports, (r) => r.position, CLUSTER.epsM);
 
 /** Low-lying factor from the mean ground elevation of the posts, against the area terciles. */
 export function lowFactor(elevationsM: (number | null)[]): number {

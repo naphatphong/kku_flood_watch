@@ -5,10 +5,10 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { Feature, FeatureCollection } from 'geojson';
 import { useEffect, useMemo, useRef } from 'react';
 import { MAP, ROAD_STATUS, type Vehicle } from '@/lib/config';
-import type { ClusterDTO } from '@/lib/data/types';
+import type { ClusterDTO, WatchDTO } from '@/lib/data/types';
 import { destination, distanceM, type LngLat } from '@/lib/domain/geo';
 import { insertVia, nearestIndex, type Route } from '@/lib/domain/route';
-import { clustersToGeoJSON, layers as contextLayers, roadColor } from '@/components/map/layers';
+import { clustersToGeoJSON, layers as contextLayers, roadColor, watchToGeoJSON } from '@/components/map/layers';
 
 const isDesktop = () => window.matchMedia('(min-width: 768px)').matches;
 const panelPadding = () =>
@@ -38,6 +38,7 @@ function dotElement(className: string) {
  */
 export default function NavigateMap({
   clusters,
+  watch,
   segments,
   vehicle,
   routes,
@@ -52,6 +53,7 @@ export default function NavigateMap({
   onPosition,
 }: {
   clusters: ClusterDTO[];
+  watch: WatchDTO[];
   segments: FeatureCollection | null;
   vehicle: Vehicle;
   routes: Route[];
@@ -76,6 +78,7 @@ export default function NavigateMap({
   const data = useMemo(
     () => ({
       clusters: clustersToGeoJSON(clusters),
+      watch: watchToGeoJSON(watch),
       segments: segments ?? EMPTY,
       routes: collection(routes.map((r, i) => line(r.coords, { i, selected: i === selected }))),
       parts: collection(
@@ -94,7 +97,7 @@ export default function NavigateMap({
           : [],
       ),
     }),
-    [clusters, segments, routes, selected, route, origin, target],
+    [clusters, watch, segments, routes, selected, route, origin, target],
   );
   const latest = useRef({ data, route, vias, onMapTap, onSelectRoute, onViasChange, onPosition });
   latest.current = { data, route, vias, onMapTap, onSelectRoute, onViasChange, onPosition };
@@ -124,6 +127,7 @@ export default function NavigateMap({
       el.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
       const d = latest.current.data;
       m.addSource('clusters', { type: 'geojson', data: d.clusters, promoteId: 'id' });
+      m.addSource('watch', { type: 'geojson', data: d.watch, promoteId: 'id' });
       m.addSource('segments', { type: 'geojson', data: d.segments });
       m.addSource('routes', { type: 'geojson', data: d.routes });
       m.addSource('parts', { type: 'geojson', data: d.parts });
