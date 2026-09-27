@@ -20,7 +20,10 @@ export function Panel({
   children: ReactNode;
 }) {
   const body = useRef<HTMLDivElement>(null);
-  useEffect(() => body.current?.scrollTo({ top: 0, behavior: 'smooth' }), [scrollKey]);
+  // Braces matter: newer browsers return a Promise from scrollTo, which React would call as cleanup.
+  useEffect(() => {
+    body.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [scrollKey]);
 
   return (
     <aside
