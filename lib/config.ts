@@ -101,6 +101,17 @@ export const CLUSTER = {
   minReportToShow: 30, // only "flooded" circles are shown: puddle or deeper
 };
 
+// Watch circles: pockets of low ground that may flood when it rains, before anyone posts
+// (owner request, 27 Sep 2026). Spots come from scripts/elevation-terciles.ts: re-run it after
+// changing neighbourM, pocketDepthM, epsM or minPoints (minPct applies right away).
+export const WATCH = {
+  neighbourM: 750, // compare each 250 m grid point with the ground around it this far
+  pocketDepthM: 4, // a pocket is at least this much lower than its surroundings
+  epsM: 400, // pocket points within this distance form one spot
+  minPoints: 3, // ignore single DEM points (noise)
+  minPct: 30, // show when rain × low-lying factor (PLAN §5 base) reaches this %
+};
+
 export const ZONE_LEVELS = [
   { min: 80, label: 'อันตราย', color: '#FF3B30', text: '#D70015' },
   { min: 60, label: 'สูง', color: '#FF9500', text: '#C93400' },

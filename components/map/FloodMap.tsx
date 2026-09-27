@@ -6,10 +6,11 @@ import type { FeatureCollection } from 'geojson';
 import { useEffect, useMemo, useRef } from 'react';
 import { MAP, type Vehicle } from '@/lib/config';
 import { destination } from '@/lib/domain/geo';
-import type { ClusterDTO, ReportPin } from '@/lib/data/types';
-import { CLICKABLE, clustersToGeoJSON, layers, reportsToGeoJSON, roadColor } from './layers';
+import type { ClusterDTO, ReportPin, WatchDTO } from '@/lib/data/types';
+import { CLICKABLE, clustersToGeoJSON, layers, reportsToGeoJSON, roadColor, watchToGeoJSON } from './layers';
 
-export type Selection = { type: 'cluster'; id: string } | { type: 'report'; id: number } | null;
+export type Selection = { type: 'cluster'; id: string } | { type: 'watch'; id: string } | { type: 'report'; id: number } | null;
+const SOURCE = { cluster: 'clusters', watch: 'watch', report: 'reports' } as const;
 
 const isDesktop = () => window.matchMedia('(min-width: 768px)').matches;
 // Keep fitted content clear of the panel: sidebar on desktop, bottom sheet on mobile.
@@ -27,6 +28,7 @@ const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
 export default function FloodMap({
   clusters,
+  watch,
   reports,
   segments,
   vehicle,
@@ -34,6 +36,7 @@ export default function FloodMap({
   onSelect,
 }: {
   clusters: ClusterDTO[];
+  watch: WatchDTO[];
   reports: ReportPin[];
   segments: FeatureCollection | null;
   vehicle: Vehicle;
@@ -48,8 +51,9 @@ export default function FloodMap({
 
   const clusterData = useMemo(() => clustersToGeoJSON(clusters), [clusters]);
   const reportData = useMemo(() => reportsToGeoJSON(reports), [reports]);
-  const data = useRef({ clusterData, reportData, segments, clusters, reports });
-  data.current = { clusterData, reportData, segments, clusters, reports };
+  const watchData = useMemo(() => watchToGeoJSON(watch), [watch]);
+  const data = useRef({ clusterData, reportData, watchData, segments, clusters, reports, watch });
+  data.current = { clusterData, reportData, watchData, segments, clusters, reports, watch };
 
   // Create the map once.
   useEffect(() => {
@@ -69,6 +73,7 @@ export default function FloodMap({
       el.current?.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
       m.addSource('clusters', { type: 'geojson', data: data.current.clusterData, promoteId: 'id' });
       m.addSource('reports', { type: 'geojson', data: data.current.reportData, promoteId: 'id' });
+      m.addSource('watch', { type: 'geojson', data: data.current.watchData, promoteId: 'id' });
       m.addSource('segments', { type: 'geojson', data: data.current.segments ?? EMPTY });
       layers(latest.current.vehicle).forEach((l) => m.addLayer(l));
       ready.current = true;
@@ -77,7 +82,13 @@ export default function FloodMap({
         const [hit] = m.queryRenderedFeatures(e.point, { layers: CLICKABLE });
         if (!hit) return latest.current.onSelect(null);
         const id = hit.properties.id;
-        latest.current.onSelect(hit.layer.id === 'clusters' ? { type: 'cluster', id } : { type: 'report', id: Number(id) });
+        latest.current.onSelect(
+          hit.layer.id === 'clusters'
+            ? { type: 'cluster', id }
+            : hit.layer.id === 'watch-fill'
+              ? { type: 'watch', id }
+              : { type: 'report', id: Number(id) },
+        );
       });
       for (const id of CLICKABLE) {
         m.on('mouseenter', id, () => (m.getCanvas().style.cursor = 'pointer'));
@@ -98,8 +109,9 @@ export default function FloodMap({
     if (!m || !ready.current) return;
     (m.getSource('clusters') as GeoJSONSource).setData(clusterData);
     (m.getSource('reports') as GeoJSONSource).setData(reportData);
+    (m.getSource('watch') as GeoJSONSource).setData(watchData);
     (m.getSource('segments') as GeoJSONSource).setData(segments ?? EMPTY);
-  }, [clusterData, reportData, segments]);
+  }, [clusterData, reportData, watchData, segments]);
 
   useEffect(() => {
     if (ready.current) map.current?.setPaintProperty('roads', 'line-color', roadColor(vehicle));
@@ -110,16 +122,15 @@ export default function FloodMap({
   useEffect(() => {
     const m = map.current;
     if (!m || !ready.current) return;
-    const source = (s: NonNullable<Selection>) => (s.type === 'cluster' ? 'clusters' : 'reports');
-    if (prev.current) m.setFeatureState({ source: source(prev.current), id: prev.current.id }, { selected: false });
+    if (prev.current) m.setFeatureState({ source: SOURCE[prev.current.type], id: prev.current.id }, { selected: false });
     prev.current = selection;
     if (!selection) return;
-    m.setFeatureState({ source: source(selection), id: selection.id }, { selected: true });
+    m.setFeatureState({ source: SOURCE[selection.type], id: selection.id }, { selected: true });
 
     const target =
-      selection.type === 'cluster'
-        ? data.current.clusters.find((c) => c.id === selection.id)
-        : data.current.reports.find((r) => r.id === selection.id);
+      selection.type === 'report'
+        ? data.current.reports.find((r) => r.id === selection.id)
+        : data.current[selection.type === 'cluster' ? 'clusters' : 'watch'].find((c) => c.id === selection.id);
     if (!target) return;
     const r = Math.max(150, 'radiusM' in target && target.radiusM ? target.radiusM : 0) * 1.4;
     const center: [number, number] = [target.lng, target.lat];

@@ -17,6 +17,8 @@ import { RainCard } from './RainCard';
 import { ReportDetail } from './ReportDetail';
 import { RoadLegend } from './RoadLegend';
 import { ZoneDetail } from './ZoneDetail';
+import { WatchDetail } from './WatchDetail';
+import { WatchList } from './WatchList';
 import { ZoneList } from './ZoneList';
 
 const FloodMap = dynamic(() => import('@/components/map/FloodMap'), { ssr: false });
@@ -29,15 +31,18 @@ export function HomeView({ viewer }: { viewer: Viewer | null }) {
   const [expanded, setExpanded] = useState(false);
 
   const clusters = zones?.clusters ?? [];
+  const watch = zones?.watch ?? [];
   const pins = reports?.reports ?? [];
   const cluster = selection?.type === 'cluster' ? clusters.find((c) => c.id === selection.id) : undefined;
   const report = selection?.type === 'report' ? pins.find((r) => r.id === selection.id) : undefined;
+  const watchSpot = selection?.type === 'watch' ? watch.find((w) => w.id === selection.id) : undefined;
   const close = () => setSelection(null);
 
   return (
     <main className="relative h-dvh overflow-hidden">
       <FloodMap
         clusters={clusters}
+        watch={watch}
         reports={pins}
         segments={segments}
         vehicle={vehicle}
@@ -67,6 +72,7 @@ export function HomeView({ viewer }: { viewer: Viewer | null }) {
         )}
         {cluster && <ZoneDetail cluster={cluster} rain={zones?.rain ?? null} onClose={close} />}
         {report && <ReportDetail report={report} onClose={close} />}
+        {watchSpot && <WatchDetail watch={watchSpot} rain={zones?.rain ?? null} onClose={close} />}
 
         {zones ? (
           <>
@@ -76,6 +82,7 @@ export function HomeView({ viewer }: { viewer: Viewer | null }) {
               selectedId={cluster?.id ?? null}
               onSelect={(id) => setSelection({ type: 'cluster', id })}
             />
+            <WatchList watch={watch} selectedId={watchSpot?.id ?? null} onSelect={(id) => setSelection({ type: 'watch', id })} />
             <Link href="/about" className="px-1 text-center text-[13px] text-secondary hover:text-link">
               วิธีคำนวณ แหล่งข้อมูล และข้อจำกัด
             </Link>

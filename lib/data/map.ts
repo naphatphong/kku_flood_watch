@@ -3,11 +3,13 @@ import type { FeatureCollection } from 'geojson';
 import { POST, type Passability, type StatusTag, type Vehicle, type WaterLevel } from '../config';
 import type { ReportKind } from '../domain/types';
 import { rainScore } from '../domain/rain';
+import { watchCircles, type LowSpot } from '../domain/watch';
+import lowSpots from '../low-spots.json'; // scripts/elevation-terciles.ts
 import { createAnonClient } from '../supabase/anon';
 import { isSupabaseConfigured, SUPABASE_URL } from '../supabase/env';
 import { demoClusters, demoReports, demoSegments, toPin } from './demo';
 import { fetchRain, toRainDTO } from './rain';
-import type { BBox, ClusterDTO, RainDTO, ReportPin, ReportsResponse, ZonesResponse } from './types';
+import type { BBox, ClusterDTO, RainDTO, ReportPin, ReportsResponse, WatchDTO, ZonesResponse } from './types';
 
 export const REPORT_COLUMNS =
   'id, kind, lng, lat, radius_m, water_level, status_tags, passability, note, photo_path, created_at, still_votes, receded_votes';
@@ -51,13 +53,20 @@ export const rowToPin = (r: ReportRow): ReportPin => ({
 export const activeCutoff = (now = new Date()) =>
   new Date(now.getTime() - POST.expiryHours * 3_600_000).toISOString();
 
-/** Flooded circles (riskiest first) and the rain that fed them. */
+/** Watch circles for this rain, leaving out low spots already inside a reported circle. */
+const watchFor = (score: number, clusters: ClusterDTO[]): WatchDTO[] =>
+  watchCircles(lowSpots as LowSpot[], score, clusters.map((c) => ({ center: [c.lng, c.lat], radiusM: c.radiusM }))).map(
+    ({ id, name, center, radiusM, elevationM, pct }) => ({ id, name, lng: center[0], lat: center[1], radiusM, elevationM, pct }),
+  );
+
+/** Flooded circles (riskiest first), watch circles and the rain that fed them. */
 export async function getZones(): Promise<ZonesResponse> {
   const now = new Date();
   if (!isSupabaseConfigured) {
     const rain = await fetchRain(now).then(toRainDTO).catch(() => null);
     const score = rain ? rainScore(rain) : 0;
-    return { clusters: demoClusters(now, score), rain, rainScore: score, updatedAt: now.toISOString(), demo: true };
+    const clusters = demoClusters(now, score);
+    return { clusters, watch: watchFor(score, clusters), rain, rainScore: score, updatedAt: now.toISOString(), demo: true };
   }
 
   const db = createAnonClient();
@@ -79,24 +88,27 @@ export async function getZones(): Promise<ZonesResponse> {
     forecast3h: r.forecast_3h,
     hourly: r.hourly,
   };
+  const list = clusters.data.map(
+    (c): ClusterDTO => ({
+      id: c.id,
+      name: c.name,
+      lng: c.lng,
+      lat: c.lat,
+      radiusM: c.radius_m,
+      reportCount: c.report_count,
+      base: c.base,
+      report: c.report,
+      c: c.c,
+      final: c.final,
+      lowFactor: c.low_factor,
+    }),
+  );
+  const score = rain ? rainScore(rain) : 0;
   return {
-    clusters: clusters.data.map(
-      (c): ClusterDTO => ({
-        id: c.id,
-        name: c.name,
-        lng: c.lng,
-        lat: c.lat,
-        radiusM: c.radius_m,
-        reportCount: c.report_count,
-        base: c.base,
-        report: c.report,
-        c: c.c,
-        final: c.final,
-        lowFactor: c.low_factor,
-      }),
-    ),
+    clusters: list,
+    watch: watchFor(score, list),
     rain,
-    rainScore: rain ? rainScore(rain) : 0,
+    rainScore: score,
     updatedAt: clusters.data[0]?.updated_at ?? r?.ts ?? now.toISOString(),
     demo: false,
   };

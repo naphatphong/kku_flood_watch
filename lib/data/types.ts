@@ -43,8 +43,20 @@ export interface RainDTO {
   hourly: number[];
 }
 
+/** Watch circle: low ground that the current rain may flood (no posts needed). */
+export interface WatchDTO {
+  id: string;
+  name: string | null;
+  lng: number;
+  lat: number;
+  radiusM: number;
+  elevationM: number;
+  pct: number;
+}
+
 export interface ZonesResponse {
   clusters: ClusterDTO[]; // flooded circles only, riskiest first
+  watch: WatchDTO[]; // watch circles from rain × low ground, riskiest first
   rain: RainDTO | null;
   rainScore: number;
   updatedAt: string;

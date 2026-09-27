@@ -2,7 +2,8 @@
 import type { ExpressionSpecification, LayerSpecification } from 'maplibre-gl';
 import type { FeatureCollection } from 'geojson';
 import { MAP, ROAD_STATUS, WATER_LEVELS, zoneLevel, type Vehicle } from '@/lib/config';
-import type { ClusterDTO, ReportPin } from '@/lib/data/types';
+import type { ClusterDTO, ReportPin, WatchDTO } from '@/lib/data/types';
+import { destination } from '@/lib/domain/geo';
 
 // Radii are meters; convert to pixels per zoom (Web Mercator at the area's latitude).
 const MPP0 = 156543.03 * Math.cos((MAP.center[1] * Math.PI) / 180);
@@ -47,7 +48,37 @@ export const reportsToGeoJSON = (reports: ReportPin[]): FeatureCollection => ({
   })),
 });
 
+/** Watch circles as polygons, so their outline can be dashed (a forecast, not a report). */
+export const watchToGeoJSON = (watch: WatchDTO[]): FeatureCollection => ({
+  type: 'FeatureCollection',
+  features: watch.map((w) => ({
+    type: 'Feature',
+    id: w.id,
+    properties: { id: w.id, color: zoneLevel(w.pct).color, label: `เฝ้าระวัง ${w.pct}%` },
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        Array.from({ length: 65 }, (_, i) =>
+          destination([w.lng, w.lat], w.radiusM * Math.sin((i / 32) * Math.PI), w.radiusM * Math.cos((i / 32) * Math.PI)),
+        ),
+      ],
+    },
+  })),
+});
+
 export const layers = (vehicle: Vehicle): LayerSpecification[] => [
+  {
+    id: 'watch-fill',
+    type: 'fill',
+    source: 'watch',
+    paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', SELECTED, 0.18, 0.07] },
+  },
+  {
+    id: 'watch-line',
+    type: 'line',
+    source: 'watch',
+    paint: { 'line-color': ['get', 'color'], 'line-width': ['case', SELECTED, 2.5, 1.5], 'line-dasharray': [2, 2] },
+  },
   {
     id: 'clusters',
     type: 'circle',
@@ -101,6 +132,13 @@ export const layers = (vehicle: Vehicle): LayerSpecification[] => [
     },
   },
   {
+    id: 'watch-label',
+    type: 'symbol',
+    source: 'watch',
+    layout: { 'text-field': ['get', 'label'], 'text-font': ['Noto Sans Regular'], 'text-size': 12 },
+    paint: { 'text-color': '#6E6E73', 'text-halo-color': '#FFFFFF', 'text-halo-width': 1.4 },
+  },
+  {
     id: 'clusters-label',
     type: 'symbol',
     source: 'clusters',
@@ -119,4 +157,4 @@ export const layers = (vehicle: Vehicle): LayerSpecification[] => [
   },
 ];
 
-export const CLICKABLE = ['reports-dot', 'clusters'];
+export const CLICKABLE = ['reports-dot', 'clusters', 'watch-fill'];
