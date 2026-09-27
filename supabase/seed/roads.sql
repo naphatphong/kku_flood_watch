@@ -41489,4 +41489,5 @@ insert into public.road_segments (id, osm_way_id, name, highway, source, target,
 (21836,1172988703,null,'residential',19602,19603,false,45.9,30,'SRID=4326;LINESTRING(102.8264044 16.5057987,102.8265104 16.5057946,102.8265004 16.5055866,102.8263932 16.5055951)'),
 (21837,1172988703,null,'residential',19603,19604,false,45.9,30,'SRID=4326;LINESTRING(102.8263932 16.5055951,102.8259638 16.5056292)'),
 (21838,1172988703,null,'residential',19604,17938,false,45.9,30,'SRID=4326;LINESTRING(102.8259638 16.5056292,102.8255344 16.5056632)');
+select public.mark_routable_nodes(); -- routes snap to the main connected network
 commit;
