@@ -1,8 +1,8 @@
 import { weatherInfo } from '@/lib/domain/weather';
 
-const SUN = '#FFD60A';
-const CLOUD = '#F2F2F7';
-const DROP = '#64D2FF';
+const SUN = '#FFB800';
+const CLOUD = '#C5CDD8';
+const DROP = '#0A84FF';
 
 const Sun = ({ x = 12, y = 12, r = 4.2 }) => (
   <g stroke={SUN} strokeWidth={1.8} strokeLinecap="round">
@@ -13,7 +13,7 @@ const Sun = ({ x = 12, y = 12, r = 4.2 }) => (
     })}
   </g>
 );
-const Moon = ({ x = 12, y = 11 }) => <path d={`M${x + 3} ${y - 6}a6.5 6.5 0 1 0 5 9a5 5 0 0 1-5-9z`} fill="#E5E5EA" />;
+const Moon = ({ x = 12, y = 11 }) => <path d={`M${x + 3} ${y - 6}a6.5 6.5 0 1 0 5 9a5 5 0 0 1-5-9z`} fill="#8E9BB0" />;
 const Cloud = ({ dy = 0, fill = CLOUD }) => (
   <path transform={`translate(0 ${dy})`} d="M7 18h10.5a3.8 3.8 0 0 0 .4-7.6A5.6 5.6 0 0 0 7.2 9.6 4.2 4.2 0 0 0 7 18z" fill={fill} />
 );
@@ -26,7 +26,7 @@ const Drops = ({ n, color = DROP }: { n: number; color?: string }) => (
   </g>
 );
 
-/** Weather symbol for a WMO code, in the colors of the iOS Weather app. */
+/** Multicolor weather symbol for a WMO code. */
 export function WeatherIcon({ code, isDay = true, size = 28 }: { code: number; isDay?: boolean; size?: number }) {
   const { kind, label } = weatherInfo(code);
   return (
@@ -56,7 +56,7 @@ export function WeatherIcon({ code, isDay = true, size = 28 }: { code: number; i
       )}
       {kind === 'storm' && (
         <>
-          <Cloud dy={-3} fill="#D1D1D6" />
+          <Cloud dy={-3} fill="#9AA3AF" />
           <path d="M12.5 15.5l-2.6 4h2.4l-1.3 3.5 3.9-5h-2.5l1.4-2.5z" fill={SUN} />
         </>
       )}

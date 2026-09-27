@@ -14,15 +14,6 @@ import { TenDay } from './TenDay';
 import { Tiles } from './Tiles';
 import { WeatherIcon } from './WeatherIcon';
 
-/** Sky behind the page, from the current weather (like the iOS Weather app). */
-function sky(code: number, isDay: boolean) {
-  const kind = weatherInfo(code).kind;
-  if (!isDay) return 'linear-gradient(180deg,#0B1D3A 0%,#23386B 100%)';
-  if (kind === 'storm' || kind === 'heavy' || kind === 'rain' || kind === 'drizzle') return 'linear-gradient(180deg,#4B5B6E 0%,#7E8FA3 100%)';
-  if (kind === 'cloudy' || kind === 'fog') return 'linear-gradient(180deg,#5F7488 0%,#9DB0C2 100%)';
-  return 'linear-gradient(180deg,#2F80ED 0%,#6CC3F5 100%)';
-}
-
 export function WeatherView({ data }: { data: WeatherDTO }) {
   const [day, setDay] = useState<number | null>(null);
   const { current: c, next24, days } = data;
@@ -32,55 +23,57 @@ export function WeatherView({ data }: { data: WeatherDTO }) {
   const watchDays = days.filter((d) => d.watch.length).length;
 
   return (
-    <main className="min-h-dvh text-white" style={{ background: sky(c.code, c.isDay) }}>
-      <div className="mx-auto flex max-w-xl flex-col gap-3 px-4 pt-4 pb-16">
-        <header className="flex items-center">
-          <Link href="/" aria-label="กลับไปที่แผนที่" className="grid size-9 place-items-center rounded-full bg-white/15 backdrop-blur-xl">
-            <ChevronIcon size={16} className="rotate-180" />
-          </Link>
-        </header>
+    <main className="mx-auto flex min-h-dvh max-w-2xl flex-col gap-4 p-4 pb-12">
+      <header className="flex items-center gap-2">
+        <Link href="/" aria-label="กลับไปที่แผนที่" className="grid size-9 shrink-0 place-items-center rounded-full bg-fill hover:bg-fill-strong">
+          <ChevronIcon size={16} className="rotate-180" />
+        </Link>
+        <h1 className="grow text-[19px] font-bold tracking-tight">พยากรณ์อากาศรอบ มข.</h1>
+        <span className="text-[12px] text-secondary">อัปเดต {c.at.slice(11)} น.</span>
+      </header>
 
-        <section className="py-4 text-center [text-shadow:0_1px_8px_rgb(0_0_0/0.15)]">
-          <p className="text-[26px] font-medium">รอบ มข.</p>
-          <p className="text-[92px] leading-none font-extralight">{Math.round(c.temp)}°</p>
-          <p className="mt-1 text-[19px] font-medium">{weatherInfo(c.code).label}</p>
-          <p className="text-[17px] font-medium">
-            สูงสุด {Math.round(today.tMax)}° ต่ำสุด {Math.round(today.tMin)}°
+      <section className="flex items-center gap-4 rounded-3xl bg-card p-5 shadow-sm">
+        <WeatherIcon code={c.code} isDay={c.isDay} size={64} />
+        <div className="min-w-0 grow">
+          <p className="text-[48px] leading-none font-bold tracking-tight">{Math.round(c.temp)}°</p>
+          <p className="mt-1 text-[16px] font-semibold">{weatherInfo(c.code).label}</p>
+          <p className="text-[14px] text-secondary">
+            สูงสุด {Math.round(today.tMax)}° · ต่ำสุด {Math.round(today.tMin)}° · รู้สึกเหมือน {Math.round(c.feelsLike)}°
           </p>
-        </section>
+        </div>
+      </section>
 
-        {alerts.length > 0 && (
-          <Card title="คำเตือนสภาพอากาศ · 3 วัน">
-            <Alerts alerts={alerts} />
-          </Card>
-        )}
-
-        <Card title="พยากรณ์รายชั่วโมง · โอกาสฝน 24 ชม." icon={<ClockIcon size={13} />}>
-          <p className="mb-3 text-[14px] leading-snug">
-            {wettest.rainProb >= 40
-              ? `ฝนมีโอกาสตกมากที่สุดช่วง ${wettest.time.slice(11, 16)} น. (${wettest.rainProb}%) ลมกระโชกตอนนี้ ${Math.round(c.gustKmh)} กม./ชม.`
-              : `24 ชม. ข้างหน้าโอกาสฝนไม่เกิน ${wettest.rainProb}% ลมกระโชกตอนนี้ ${Math.round(c.gustKmh)} กม./ชม.`}
-          </p>
-          <Hourly hours={next24} nowLabel />
+      {alerts.length > 0 && (
+        <Card title="คำเตือนสภาพอากาศ · 3 วัน">
+          <Alerts alerts={alerts} />
         </Card>
+      )}
 
-        <Card title="พยากรณ์ 10 วัน · กดวันเพื่อดูจุดเฝ้าระวัง">
-          <TenDay days={days} currentTemp={c.temp} onSelect={setDay} />
-          <p className="mt-2 flex items-center gap-1.5 text-[12px] text-white/70">
-            <span className="size-2 rounded-full bg-[#FF9F0A]" />
-            {watchDays ? `มีจุดเฝ้าระวัง ${watchDays} วัน จากฝนที่คาดไว้` : 'ฝนที่คาดไว้ 10 วันยังไม่ถึงเกณฑ์เฝ้าระวัง'}
-          </p>
-        </Card>
-
-        <Tiles current={c} days={days} />
-
-        <p className="mt-2 text-center text-[12px] text-white/60">
-          ข้อมูลพยากรณ์ Open-Meteo · ณ {c.at.slice(11)} น. ·{' '}
-          <Link href="/about" className="underline">
-            วิธีคำนวณจุดเฝ้าระวัง
-          </Link>
+      <Card title="รายชั่วโมง · โอกาสฝน 24 ชม." icon={<ClockIcon size={13} />}>
+        <p className="mb-3 text-[14px] leading-snug">
+          {wettest.rainProb >= 40
+            ? `ฝนมีโอกาสตกมากที่สุดช่วง ${wettest.time.slice(11, 16)} น. (${wettest.rainProb}%) ลมกระโชกตอนนี้ ${Math.round(c.gustKmh)} กม./ชม.`
+            : `24 ชม. ข้างหน้าโอกาสฝนไม่เกิน ${wettest.rainProb}% ลมกระโชกตอนนี้ ${Math.round(c.gustKmh)} กม./ชม.`}
         </p>
-      </div>
+        <Hourly hours={next24} nowLabel />
+      </Card>
+
+      <Card title="10 วัน · กดวันเพื่อดูจุดเฝ้าระวัง">
+        <TenDay days={days} currentTemp={c.temp} onSelect={setDay} />
+        <p className="mt-2 flex items-center gap-1.5 text-[12px] text-secondary">
+          <span className="size-2 rounded-full bg-[#FF9F0A]" />
+          {watchDays ? `มีจุดเฝ้าระวัง ${watchDays} วัน จากฝนที่คาดไว้` : 'ฝนที่คาดไว้ 10 วันยังไม่ถึงเกณฑ์เฝ้าระวัง'}
+        </p>
+      </Card>
+
+      <Tiles current={c} days={days} />
+
+      <p className="text-center text-[12px] text-secondary">
+        ข้อมูลพยากรณ์ Open-Meteo ·{' '}
+        <Link href="/about" className="font-semibold text-link">
+          วิธีคำนวณจุดเฝ้าระวัง
+        </Link>
+      </p>
       {day !== null && <DaySheet days={days} index={day} onSelect={setDay} onClose={() => setDay(null)} />}
     </main>
   );
