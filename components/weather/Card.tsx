@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 
-/** Frosted card on the sky background, with a small caption like the iOS Weather app. */
+/** Section card in the site's style: caption above, white card below. */
 export function Card({ title, icon, children, className = '' }: { title: string; icon?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`rounded-2xl bg-white/12 p-3.5 ring-1 ring-white/10 backdrop-blur-xl ${className}`}>
-      <h2 className="mb-2 flex items-center gap-1.5 border-b border-white/15 pb-2 text-[12px] font-semibold tracking-wide text-white/70">
+    <section className={className}>
+      <h2 className="mb-1.5 flex items-center gap-1.5 px-1 text-[13px] font-semibold text-secondary">
         {icon}
         {title}
       </h2>
-      {children}
+      <div className="rounded-2xl bg-card p-3.5 shadow-sm">{children}</div>
     </section>
   );
 }
