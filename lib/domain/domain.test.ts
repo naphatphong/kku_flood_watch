@@ -6,6 +6,8 @@ import { buildClusters, groupReports, isFlooded, lowFactor, scoreCluster } from 
 import { destination, distanceM, type LngLat } from './geo';
 import { expiresAt, postScore, postWeight, voteMultiplier } from './post';
 import { rainScore, summarizeRain } from './rain';
+import { parseReportForm } from './report-input';
+import { chainLengthM, toggleSegment, type ChainSegment } from './road-chain';
 import { segmentStatuses } from './segments';
 import { spamCheck } from './spam';
 import type { Report } from './types';
@@ -155,4 +157,54 @@ test('spam check thresholds (PLAN §7)', () => {
   assert.equal(bad.status, 'rejected');
   assert.ok(spamCheck({ ...base, waterLevel: 'knee', rain24Mm: 2 }, NOW).reasons.includes('implausibleDepth'));
   assert.equal(spamCheck({ ...base, approvedCount: 5 }, NOW).score, -40);
+});
+
+test('report form validation', () => {
+  const form = (fields: Record<string, string>) => {
+    const f = new FormData();
+    for (const [k, v] of Object.entries(fields)) f.set(k, v);
+    return f;
+  };
+  const area = {
+    kind: 'area',
+    lng: String(ORIGIN[0]),
+    lat: String(ORIGIN[1]),
+    radius_m: '120',
+    water_level: 'knee',
+    status_tags: 'rising,raining',
+    passability: JSON.stringify({ motorcycle: 'blocked', car: 'hard' }),
+    note: '  น้ำขึ้นเร็ว  ',
+  };
+  const ok = parseReportForm(form(area));
+  assert.ok(ok.ok);
+  assert.equal(ok.ok && ok.input.note, 'น้ำขึ้นเร็ว');
+  assert.equal(ok.ok && ok.input.poster, null);
+
+  assert.equal(parseReportForm(form({ ...area, radius_m: '301' })).ok, false);
+  assert.equal(parseReportForm(form({ ...area, water_level: 'ocean' })).ok, false);
+  assert.equal(parseReportForm(form({ ...area, status_tags: 'rising,flying' })).ok, false);
+  assert.equal(parseReportForm(form({ ...area, passability: '{"boat":"ok"}' })).ok, false);
+  assert.equal(parseReportForm(form({ ...area, passability: '{"car":"unknown"}' })).ok, false);
+  const far = destination(ORIGIN, 6000, 0);
+  assert.equal(parseReportForm(form({ ...area, lng: String(far[0]), lat: String(far[1]) })).ok, false);
+
+  const road = parseReportForm(form({ ...area, kind: 'road', segment_ids: '5,6,6' }));
+  assert.deepEqual(road.ok && road.input.segmentIds, [5, 6]);
+  assert.equal(parseReportForm(form({ ...area, kind: 'road', segment_ids: '' })).ok, false);
+});
+
+test('road picker chain: extend at either end, remove ends, restart elsewhere', () => {
+  const seg = (id: number, source: number, target: number): ChainSegment => ({ id, source, target, lengthM: 50, coords: [] });
+  const a = seg(1, 10, 11);
+  const b = seg(2, 11, 12);
+  const c = seg(3, 9, 10);
+  const far = seg(4, 50, 51);
+  let chain = toggleSegment([], a);
+  chain = toggleSegment(chain, b); // tail
+  chain = toggleSegment(chain, c); // head
+  assert.deepEqual(chain.map((s) => s.id), [3, 1, 2]);
+  assert.equal(chainLengthM(chain), 150);
+  assert.deepEqual(toggleSegment(chain, a).map((s) => s.id), [3, 1, 2]); // interior: unchanged
+  assert.deepEqual(toggleSegment(chain, b).map((s) => s.id), [3, 1]); // remove tail
+  assert.deepEqual(toggleSegment(chain, far).map((s) => s.id), [4]); // new chain
 });

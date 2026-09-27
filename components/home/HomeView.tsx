@@ -11,7 +11,7 @@ import type { Viewer } from '@/lib/auth';
 import { DEFAULT_VEHICLE, VEHICLES, type Vehicle } from '@/lib/config';
 import { useMapData } from '@/lib/hooks/useMapData';
 import { ActionBar } from './ActionBar';
-import { Panel } from './Panel';
+import { Panel } from '@/components/ui/Panel';
 import { PanelHeader } from './PanelHeader';
 import { RainCard } from './RainCard';
 import { ReportDetail } from './ReportDetail';

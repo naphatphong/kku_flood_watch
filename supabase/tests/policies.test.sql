@@ -104,3 +104,16 @@ do $$ begin
   perform public.snapshot_clusters_hourly(0.5); -- idempotent within the hour
   assert (select count(*) from public.flood_clusters_hourly) = 1, 'hourly snapshot';
 end $$;
+
+-- Post helpers.
+do $$ declare r jsonb; begin
+  insert into public.road_nodes values (3, st_setsrid(st_point(102.8182, 16.4617), 4326));
+  insert into public.road_segments (id, source, target, length_m, speed_kmh, geom)
+  values (11, 2, 3, 64, 30, st_makeline(st_setsrid(st_point(102.8176, 16.4617), 4326), st_setsrid(st_point(102.8182, 16.4617), 4326))),
+         (12, 1, 3, 200, 30, st_makeline(st_setsrid(st_point(102.8170, 16.4640), 4326), st_setsrid(st_point(102.8180, 16.4650), 4326)));
+  r := public.road_selection(array[10, 11]);
+  assert (r ->> 'connected')::boolean and (r ->> 'length_m')::real = 128 and (r ->> 'found')::int = 2, 'connected road selection';
+  assert not (public.road_selection(array[10, 12]) ->> 'connected')::boolean, 'gap is not connected';
+  r := public.poster_stats('00000000-0000-0000-0000-00000000000b', 30);
+  assert (r ->> 'approved')::int = 1 and (r ->> 'rejected')::int = 0, 'poster stats';
+end $$;
