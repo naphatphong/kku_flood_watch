@@ -166,3 +166,21 @@ do $$ begin
   exception when check_violation then null;
   end;
 end $$;
+
+-- Saved places and timetable: each user reads and writes only their own row.
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+insert into public.user_data (user_id, data) values ('00000000-0000-0000-0000-00000000000b', '{"saved": []}');
+do $$ begin
+  begin
+    insert into public.user_data (user_id, data) values ('00000000-0000-0000-0000-00000000000a', '{}');
+    assert false, 'wrote another user''s row';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+do $$ begin
+  assert (select count(*) from public.user_data) = 0, 'sees only own row';
+end $$;
+reset request.jwt.claim.sub;
+reset role;

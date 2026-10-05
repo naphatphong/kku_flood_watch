@@ -19,3 +19,9 @@ export function createMap(options: MapOptions & { container: HTMLElement }): map
     return null;
   }
 }
+
+export const isDesktop = () => window.matchMedia('(min-width: 768px)').matches;
+
+/** Map padding that keeps fitted content clear of the panel: sidebar on desktop, bottom sheet on mobile. */
+export const panelPadding = () =>
+  isDesktop() ? { left: 420, right: 70, top: 70, bottom: 70 } : { left: 30, right: 30, top: 70, bottom: window.innerHeight * 0.5 };

@@ -1,12 +1,16 @@
 // Highlighted campus places: the selected building, today's classes, saved places.
 // From zoom 14 the map's own 3D building turns blue (feature state; OpenMapTiles ids are the
-// OSM way id × 10 plus a digit). Below that our outline is drawn instead. Places without one get a pin.
-import type { GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl';
+// OSM way id × 10 plus a digit). Below that, or when the base map lacks the block, our outline is
+// drawn instead. Places without an outline get a pin.
+import type { FillExtrusionLayerSpecification, GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl';
 import type { FeatureCollection } from 'geojson';
+import { buildingHeightM, type Building } from '@/lib/domain/buildings';
 import type { LngLat } from '@/lib/domain/geo';
+import type { PlaceRef } from '@/lib/domain/user-data';
 
 export interface Highlight {
   key: string;
+  buildingId: string | null; // campus building ("w123"), to light up its 3D block
   name: string;
   label: string | null; // e.g. "1" for the first class of the day
   center: LngLat;
@@ -19,22 +23,40 @@ const BASE_MIN_ZOOM = 14; // buildings-3d in realism.ts
 
 /** The base map's building features for a highlight: "w123" → ids 1230–1232 (the last digit varies in OpenMapTiles). */
 const baseFeatures = (h: Highlight) =>
-  h.polygon && /^w\d+$/.test(h.key)
-    ? [0, 1, 2].map((k) => ({ source: 'openmaptiles', sourceLayer: 'building', id: Number(h.key.slice(1)) * 10 + k }))
+  h.buildingId && /^w\d+$/.test(h.buildingId)
+    ? [0, 1, 2].map((k) => ({ source: 'openmaptiles', sourceLayer: 'building', id: Number(h.buildingId!.slice(1)) * 10 + k }))
     : [];
-const lit = new WeakMap<MapLibreMap, Highlight[]>();
+// Per map: what is lit, and which of those the base map has no 3D block for (we draw those).
+const state = new WeakMap<MapLibreMap, { list: Highlight[]; own: Set<string> }>();
 
 function light(map: MapLibreMap, list: Highlight[]) {
-  for (const f of (lit.get(map) ?? []).flatMap(baseFeatures)) map.setFeatureState(f, { highlight: false });
+  for (const f of (state.get(map)?.list ?? []).flatMap(baseFeatures)) map.setFeatureState(f, { highlight: false });
   for (const f of list.flatMap(baseFeatures)) map.setFeatureState(f, { highlight: true });
-  lit.set(map, list);
+  state.set(map, { list, own: state.get(map)?.own ?? new Set() });
 }
 
-const toGeoJSON = (list: Highlight[]): FeatureCollection => ({
+/** After tiles load: outlines whose base block isn't in the tiles get our own blue block at every zoom. */
+function checkBase(map: MapLibreMap) {
+  const s = state.get(map);
+  if (!s || map.getZoom() < BASE_MIN_ZOOM) return;
+  const ids = new Set(map.querySourceFeatures('openmaptiles', { sourceLayer: 'building' }).map((f) => f.id));
+  const own = new Set(s.list.filter((h) => h.polygon && !baseFeatures(h).some((f) => ids.has(f.id))).map((h) => h.key));
+  if ([...own].join() === [...s.own].join()) return;
+  state.set(map, { ...s, own });
+  (map.getSource('places') as GeoJSONSource).setData(toGeoJSON(s.list, own));
+}
+
+const toGeoJSON = (list: Highlight[], own = new Set<string>()): FeatureCollection => ({
   type: 'FeatureCollection',
   features: list.flatMap((h) => [
     ...(h.polygon
-      ? [{ type: 'Feature' as const, properties: { height: h.heightM }, geometry: { type: 'Polygon' as const, coordinates: [h.polygon] } }]
+      ? [
+          {
+            type: 'Feature' as const,
+            properties: { height: h.heightM, own: own.has(h.key) },
+            geometry: { type: 'Polygon' as const, coordinates: [h.polygon] },
+          },
+        ]
       : []),
     {
       type: 'Feature' as const,
@@ -47,13 +69,15 @@ const toGeoJSON = (list: Highlight[]): FeatureCollection => ({
 /** Adds the highlight layers on top. Call on the map's `load`, after the other layers. */
 export function addPlaceLayers(map: MapLibreMap, list: Highlight[]) {
   map.addSource('places', { type: 'geojson', data: toGeoJSON(list) });
+  const paint: FillExtrusionLayerSpecification['paint'] = { 'fill-extrusion-color': COLOR, 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.88 };
+  map.addLayer({ id: 'places-3d', type: 'fill-extrusion', source: 'places', filter: ['==', ['geometry-type'], 'Polygon'], maxzoom: BASE_MIN_ZOOM, paint });
   map.addLayer({
-    id: 'places-3d',
+    id: 'places-3d-own',
     type: 'fill-extrusion',
     source: 'places',
-    filter: ['==', ['geometry-type'], 'Polygon'],
-    maxzoom: BASE_MIN_ZOOM,
-    paint: { 'fill-extrusion-color': COLOR, 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.88 },
+    filter: ['all', ['==', ['geometry-type'], 'Polygon'], ['get', 'own']],
+    minzoom: BASE_MIN_ZOOM,
+    paint,
   });
   map.addLayer({
     id: 'places-pin',
@@ -79,9 +103,30 @@ export function addPlaceLayers(map: MapLibreMap, list: Highlight[]) {
     paint: { 'text-color': '#0A5FC2', 'text-halo-color': '#FFFFFF', 'text-halo-width': 1.8 },
   });
   light(map, list);
+  map.on('idle', () => checkBase(map));
 }
 
 export function setPlaces(map: MapLibreMap, list: Highlight[]) {
-  (map.getSource('places') as GeoJSONSource | undefined)?.setData(toGeoJSON(list));
   light(map, list);
+  (map.getSource('places') as GeoJSONSource | undefined)?.setData(toGeoJSON(list, state.get(map)?.own));
+  checkBase(map);
+}
+
+/** Highlight for a building: its code (or a short name) as the label text. */
+export const buildingHighlight = (b: Building, label: string | null = null): Highlight => ({
+  key: b.id,
+  buildingId: b.id,
+  name: b.code ?? (b.name.length > 28 ? `${b.name.slice(0, 27)}…` : b.name),
+  label,
+  center: b.center,
+  polygon: b.polygon,
+  heightM: buildingHeightM(b),
+});
+
+/** Highlight for a saved place or a class's place: the building's outline when we know it. */
+export function placeHighlight(p: PlaceRef, buildings: Building[], label: string | null = null, key = p.id ?? p.name): Highlight {
+  const b = p.id ? buildings.find((x) => x.id === p.id) : undefined;
+  return b
+    ? { ...buildingHighlight(b, label), key }
+    : { key, buildingId: null, name: p.name, label, center: p.center, polygon: null, heightM: 0 };
 }

@@ -6,14 +6,16 @@ import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 import { UserMenu } from '@/components/auth/UserMenu';
 import type { Selection } from '@/components/map/FloodMap';
-import type { Highlight } from '@/components/map/place-layer';
+import { buildingHighlight, placeHighlight } from '@/components/map/place-layer';
 import { Segmented } from '@/components/ui/Segmented';
 import type { Viewer } from '@/lib/auth';
 import { DEFAULT_VEHICLE, VEHICLES, type Vehicle } from '@/lib/config';
-import { buildingHeightM, navigateHref, type Building } from '@/lib/domain/buildings';
+import { navigateHref, type Building } from '@/lib/domain/buildings';
 import { insidePolygon } from '@/lib/domain/geo';
+import { bangkokClock, classesOn } from '@/lib/domain/timetable';
 import { useBuildings } from '@/lib/hooks/useBuildings';
 import { useMapData } from '@/lib/hooks/useMapData';
+import { useNow } from '@/lib/hooks/useNow';
 import { useUserData } from '@/lib/hooks/useUserData';
 import { ActionBar } from './ActionBar';
 import { BuildingDetail } from './BuildingDetail';
@@ -25,6 +27,7 @@ import { RainCard } from './RainCard';
 import { ReportDetail } from './ReportDetail';
 import { RoadLegend } from './RoadLegend';
 import { SavedPlaces } from './SavedPlaces';
+import { TodayClasses } from './TodayClasses';
 import { ZoneDetail } from './ZoneDetail';
 import { WatchDetail } from './WatchDetail';
 import { WatchList } from './WatchList';
@@ -33,19 +36,11 @@ import { ZoneList } from './ZoneList';
 const FloodMap = dynamic(() => import('@/components/map/FloodMap'), { ssr: false });
 const VEHICLE_TABS = VEHICLES.map((v) => ({ id: v.id, label: v.short }));
 
-const toHighlight = (b: Building, label: string | null = null): Highlight => ({
-  key: b.id,
-  name: b.code ?? (b.name.length > 28 ? `${b.name.slice(0, 27)}…` : b.name),
-  label,
-  center: b.center,
-  polygon: b.polygon,
-  heightM: buildingHeightM(b),
-});
-
 export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: string | null }) {
   const { zones, reports, segments, error } = useMapData();
   const buildings = useBuildings();
-  const { saved } = useUserData();
+  const { saved, classes } = useUserData();
+  const now = useNow();
   const router = useRouter();
   const [vehicle, setVehicle] = useState<Vehicle>(DEFAULT_VEHICLE);
   const [selection, setSelection] = useState<Selection>(null);
@@ -58,7 +53,12 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
   const report = selection?.type === 'report' ? pins.find((r) => r.id === selection.id) : undefined;
   const watchSpot = selection?.type === 'watch' ? watch.find((w) => w.id === selection.id) : undefined;
   const building = selection?.type === 'building' ? buildings.find((b) => b.id === selection.id) : undefined;
-  const highlights = useMemo(() => (building ? [toHighlight(building)] : []), [building]);
+  const today = useMemo(() => classesOn(classes, bangkokClock(now).day), [classes, now]);
+  // The selected building, or else today's classes numbered in order.
+  const highlights = useMemo(
+    () => (building ? [buildingHighlight(building)] : today.map((c, i) => placeHighlight(c.place, buildings, String(i + 1), c.id))),
+    [building, today, buildings],
+  );
   const close = () => setSelection(null);
   const pick = (b: Building) => setSelection({ type: 'building', id: b.id });
 
@@ -87,6 +87,7 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
         {cluster && <ZoneDetail cluster={cluster} rain={zones?.rain ?? null} onClose={close} />}
         {report && <ReportDetail report={report} onClose={close} />}
         {watchSpot && <WatchDetail watch={watchSpot} rain={zones?.rain ?? null} onClose={close} />}
+        {!building && <TodayClasses classes={classes} today={today} now={now} />}
         <SavedPlaces
           saved={saved}
           onPick={(p) => {

@@ -15,6 +15,7 @@ import { chainLengthM, toggleSegment, type ChainSegment } from './road-chain';
 import { segmentStatuses } from './segments';
 import { spamCheck } from './spam';
 import { parseIncidents } from './traffic';
+import { classesOn, nextClass, validateEntry, whenLabel, type ClassEntry } from './timetable';
 import type { Report } from './types';
 import { EMPTY_USER_DATA, isSaved, newer, readUserData, toggleSaved } from './user-data';
 
@@ -454,4 +455,33 @@ test('saved places and device/account copies', () => {
   const c = { ...EMPTY_USER_DATA, saved: [p], updatedAt: 20 };
   assert.equal(newer(a, c), c);
   assert.equal(newer(c, a), c);
+});
+
+test('timetable: validation, the day list and the next class (Bangkok time)', () => {
+  const place = { id: 'w1', name: 'SC09', center: ORIGIN };
+  const base = { course: ' sc313002 ', title: '  ', day: 1, start: '09:00', end: '12:00', place, room: ' 1102 ' };
+  const ok = validateEntry(base);
+  assert.ok(ok.ok);
+  assert.deepEqual(ok.ok && [ok.entry.course, ok.entry.title, ok.entry.room], ['SC313002', null, '1102']);
+  assert.equal(validateEntry({ ...base, end: '08:00' }).ok, false);
+  assert.equal(validateEntry({ ...base, start: '9:00' }).ok, false);
+  assert.equal(validateEntry({ ...base, day: 7 }).ok, false);
+  assert.equal(validateEntry({ ...base, course: '' }).ok, false);
+
+  const c = (id: string, day: number, start: string, end: string): ClassEntry => ({ ...base, id, course: id, title: null, room: null, day, start, end });
+  const week = [c('mon-pm', 1, '13:00', '16:00'), c('mon-am', 1, '09:00', '12:00'), c('wed', 3, '08:00', '10:00')];
+  assert.deepEqual(classesOn(week, 1).map((x) => x.id), ['mon-am', 'mon-pm']);
+
+  const monday = (hhmm: string) => new Date(`2026-10-05T${hhmm}:00+07:00`); // 5 Oct 2026 is a Monday
+  assert.deepEqual(nextClass(week, monday('08:30')), { entry: week[1], inMinutes: 30 });
+  assert.deepEqual(nextClass(week, monday('10:00')), { entry: week[1], inMinutes: -60 }); // in class
+  assert.deepEqual(nextClass(week, monday('16:30')), { entry: week[2], inMinutes: 2 * 1440 + 480 - 990 });
+  assert.equal(nextClass([], monday('10:00')), null);
+
+  assert.equal(whenLabel(30, 1, 1), 'อีก 30 นาที');
+  assert.equal(whenLabel(125, 1, 1), 'อีก 2 ชม. 5 นาที');
+  assert.equal(whenLabel(120, 1, 1), 'อีก 2 ชม.');
+  assert.equal(whenLabel(-5, 1, 1), 'กำลังเรียน');
+  assert.equal(whenLabel(900, 2, 1), 'พรุ่งนี้');
+  assert.equal(whenLabel(3000, 3, 1), 'วันพุธ');
 });
