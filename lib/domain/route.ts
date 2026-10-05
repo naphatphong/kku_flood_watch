@@ -195,6 +195,18 @@ export const incidentsAlong = (coords: LngLat[], incidents: RouteIncident[]): Ro
     .sort((a, b) => a.index - b.index)
     .map(({ i }) => i);
 
+/**
+ * After TomTom's live times replace our estimates, keep the first card and only the cards
+ * still faster than every card kept before them (an "avoid traffic" card TomTom says is
+ * slower would mislead).
+ */
+export function keepFaster(routes: Route[]): Route[] {
+  const kept: Route[] = [];
+  for (const r of routes)
+    if (!kept.length || kept.every((k) => r.durationS <= k.durationS * (1 - ROUTING.minSavingPct / 100))) kept.push(r);
+  return kept;
+}
+
 // ---- Turn list ------------------------------------------------------------------
 
 const LOOK_M = 20; // measure turn angles over this distance either side of the joint

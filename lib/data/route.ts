@@ -2,7 +2,7 @@ import 'server-only';
 import { INCIDENTS, ROUTING, TRAFFIC, type IncidentCategory, type RoadStatus } from '../config';
 import type { LngLat } from '../domain/geo';
 import { isActive } from '../domain/post';
-import { incidentsAlong, pickRoutes, routeEnds, type PathSegment, type Route, type RouteIncident, type RouteQuery } from '../domain/route';
+import { incidentsAlong, keepFaster, pickRoutes, routeEnds, type PathSegment, type Route, type RouteIncident, type RouteQuery } from '../domain/route';
 import { createAnonClient } from '../supabase/anon';
 import { activeCutoff } from './map';
 import { getIncidents, trafficTime } from './traffic';
@@ -64,10 +64,11 @@ export async function getRoutes(q: RouteQuery): Promise<RouteResponse> {
 
   const points = data.points as { lng: number; lat: number }[];
   const safe = (data.safe as SegmentRow[][]).map(toPath);
-  const routes = pickRoutes(safe, data.plain ? toPath(data.plain) : null, q.vehicle, data.fast ? toPath(data.fast) : null);
-  // Cards are picked on free-flow time; live traffic then corrects the times shown.
-  const [times, incidents] = await Promise.all([Promise.all(routes.map((r) => trafficTime(r.coords, q.vehicle))), incidentsNow()]);
-  times.forEach((t, i) => t && Object.assign(routes[i], t));
+  const picked = pickRoutes(safe, data.plain ? toPath(data.plain) : null, q.vehicle, data.fast ? toPath(data.fast) : null);
+  // Cards are picked on our traffic estimate; TomTom live times then replace it and may drop a card.
+  const [times, incidents] = await Promise.all([Promise.all(picked.map((r) => trafficTime(r.coords, q.vehicle))), incidentsNow()]);
+  times.forEach((t, i) => t && Object.assign(picked[i], t));
+  const routes = keepFaster(picked);
   for (const r of routes) r.incidents = incidentsAlong(r.coords, incidents);
   return {
     routes,
