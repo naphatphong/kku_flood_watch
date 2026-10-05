@@ -153,7 +153,7 @@ https://vercel.com → project **kku-flood-watch** → **Settings → Environmen
 
 ```bash
 CRON_SECRET='...' node scripts/setup-supabase.mjs refresh   # ต้องได้ 200 และ {"ok":true,...}
-node scripts/setup-supabase.mjs check                        # migrations 8, road_segments 21838, cron_jobs 1, vault_secrets 2, rain_rows ≥ 1
+node scripts/setup-supabase.mjs check                        # migrations 11, road_segments 23067 (รวมทางเดิน 1229), cron_jobs 1, vault_secrets 2, rain_rows ≥ 1
 ```
 
 ในเบราว์เซอร์:
