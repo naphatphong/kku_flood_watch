@@ -1,6 +1,6 @@
 'use client';
 
-import { createMap } from './create-map';
+import { createMap, isDesktop, panelPadding } from './create-map';
 import maplibregl, { type GeoJSONSource } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection } from 'geojson';
@@ -23,12 +23,6 @@ export type Selection =
 const SOURCE = { cluster: 'clusters', watch: 'watch', report: 'reports' } as const;
 const featureOf = (s: Selection) => (s && s.type !== 'building' ? { source: SOURCE[s.type], id: s.id } : null);
 
-const isDesktop = () => window.matchMedia('(min-width: 768px)').matches;
-// Keep fitted content clear of the panel: sidebar on desktop, bottom sheet on mobile.
-const panelPadding = () =>
-  isDesktop()
-    ? { left: 420, right: 70, top: 70, bottom: 70 }
-    : { left: 30, right: 30, top: 70, bottom: window.innerHeight * 0.5 };
 
 const AREA_BOUNDS = (() => {
   const r = MAP.radiusKm * 1000 * 0.6;

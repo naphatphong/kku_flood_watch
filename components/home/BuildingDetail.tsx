@@ -1,6 +1,7 @@
 'use client';
 
-import { RouteIcon, StarIcon } from '@/components/ui/icons';
+import Link from 'next/link';
+import { CalendarIcon, RouteIcon, StarIcon } from '@/components/ui/icons';
 import { PillButton, PillLink } from '@/components/ui/Pill';
 import { KIND_LABELS, navigateHref, type Building } from '@/lib/domain/buildings';
 import { isSaved, placeRef, toggleSaved } from '@/lib/domain/user-data';
@@ -37,6 +38,10 @@ export function BuildingDetail({ building, onClose }: { building: Building; onCl
           {starred ? 'บันทึกแล้ว' : 'บันทึก'}
         </PillButton>
       </div>
+      <Link href={`/timetable?place=${building.id}`} className="mt-2.5 flex items-center justify-center gap-1.5 text-[14px] font-semibold text-link">
+        <CalendarIcon size={15} />
+        เพิ่มในตารางเรียน
+      </Link>
     </DetailCard>
   );
 }
