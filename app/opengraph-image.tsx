@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { OG_SIZE, OgFrame, ogFonts } from '@/lib/og';
 
-export const alt = 'KKU Flood Watch แผนที่น้ำท่วมรอบ มข.';
+export const alt = 'KKU Campus ค้นหาตึก ตารางเรียน และนำทางใน มข.';
 export const size = OG_SIZE;
 export const contentType = 'image/png';
 

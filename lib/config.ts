@@ -1,9 +1,10 @@
 // Every tunable number lives here (PLAN §4–7 and §0). Change values here, never inline.
 
 export const SITE = {
-  name: 'KKU Flood Watch',
-  tagline: 'น้ำท่วมรอบ มข. จากรายงานของชุมชน',
-  description: 'แผนที่จุดน้ำท่วม สถานะถนนแยกตามประเภทรถ และเส้นทางหลบน้ำรอบมหาวิทยาลัยขอนแก่น',
+  name: 'KKU Campus',
+  tagline: 'ค้นหาตึก ตารางเรียน และนำทางใน มข.',
+  description:
+    'ค้นหาตึกเรียน ใส่ตารางเรียน นำทางเลี่ยงน้ำท่วมและรถติด พร้อมรายงานน้ำท่วมและเหตุบนถนนรอบมหาวิทยาลัยขอนแก่น',
   url: process.env.NEXT_PUBLIC_SITE_URL ?? 'https://kku-flood-watch.vercel.app',
   timeZone: 'Asia/Bangkok',
 };

@@ -86,3 +86,25 @@ export const InfoIcon = (p: IconProps) => (
     <path d="M12 11v5M12 7.6v.4" />
   </Svg>
 );
+
+export const BuildingIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 20.5V5.5l8-2.5v17.5M13 8.5l6 2v10M3.5 20.5h17M8 8h2M8 11.5h2M8 15h2M16 13.5h.5M16 17h.5" />
+  </Svg>
+);
+
+export const StarIcon = ({ filled, ...p }: IconProps & { filled?: boolean }) => (
+  <Svg {...p}>
+    <path
+      d="M12 3.8l2.5 5.1 5.6.8-4 3.9 1 5.6-5.1-2.7-5 2.7 1-5.6-4.1-3.9 5.6-.8z"
+      fill={filled ? 'currentColor' : 'none'}
+    />
+  </Svg>
+);
+
+export const CalendarIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="3.5" y="5" width="17" height="15.5" rx="3" />
+    <path d="M3.5 10h17M8 3v4M16 3v4" />
+  </Svg>
+);

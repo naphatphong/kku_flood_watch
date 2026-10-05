@@ -1,9 +1,12 @@
 'use client';
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { CloseIcon, PinIcon } from '@/components/ui/icons';
+import { BuildingIcon, CloseIcon, PinIcon, StarIcon } from '@/components/ui/icons';
+import { KIND_LABELS, searchBuildings } from '@/lib/domain/buildings';
 import type { LngLat } from '@/lib/domain/geo';
 import { searchPlaces, type Place } from '@/lib/geocode';
+import { useBuildings } from '@/lib/hooks/useBuildings';
+import { useUserData } from '@/lib/hooks/useUserData';
 
 export type Endpoint = { kind: 'gps' } | { kind: 'place'; label: string; position: LngLat };
 
@@ -12,7 +15,7 @@ const label = (v: Endpoint | null) => (v ? (v.kind === 'gps' ? MY_LOCATION : v.l
 
 type Option = { key: string; title: string; detail?: string; icon?: ReactNode; pick: () => void };
 
-/** Origin/destination input: place search, "my location", or pick a point on the map. */
+/** Origin/destination input: campus buildings and saved places first, then place search, "my location", or a point on the map. */
 export function PlaceField({
   value,
   onChange,
@@ -35,6 +38,8 @@ export function PlaceField({
   const [places, setPlaces] = useState<Place[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [active, setActive] = useState(0);
+  const buildings = useBuildings();
+  const { saved } = useUserData();
 
   useEffect(() => {
     setText(label(value));
@@ -60,6 +65,10 @@ export function PlaceField({
     };
   }, [query]);
 
+  const typed = open && text !== label(value) ? text.trim() : '';
+  const campus = typed ? searchBuildings(buildings, typed, 5) : [];
+  const campusNames = new Set(campus.map((b) => b.name));
+
   const choose = (v: Endpoint | null) => {
     onChange(v);
     setOpen(false);
@@ -77,7 +86,23 @@ export function PlaceField({
         onPickOnMap();
       },
     },
-    ...places.map((p, i) => ({
+    ...(typed
+      ? []
+      : saved.map((p, i) => ({
+          key: `s${i}`,
+          title: p.name,
+          detail: 'ที่บันทึกไว้',
+          icon: <StarIcon size={16} filled className="text-[#FF9F0A]" />,
+          pick: () => choose({ kind: 'place', label: p.name, position: p.center }),
+        }))),
+    ...campus.map((b) => ({
+      key: b.id,
+      title: b.name,
+      detail: ['ใน มข.', b.code, KIND_LABELS[b.kind]].filter(Boolean).join(' · '),
+      icon: <BuildingIcon size={16} className="text-link" />,
+      pick: () => choose({ kind: 'place', label: b.name, position: b.center }),
+    })),
+    ...places.filter((p) => !campusNames.has(p.label)).map((p, i) => ({
       key: `p${i}`,
       title: p.label,
       detail: p.detail,
@@ -154,7 +179,7 @@ export function PlaceField({
           {query.length >= 2 && status !== 'idle' && (
             <li className="px-2.5 py-2 text-[13px] text-secondary">{status === 'loading' ? 'กำลังค้นหา…' : 'ค้นหาไม่สำเร็จ ลองใหม่'}</li>
           )}
-          {query.length >= 2 && status === 'idle' && !places.length && (
+          {query.length >= 2 && status === 'idle' && !places.length && !campus.length && (
             <li className="px-2.5 py-2 text-[13px] text-secondary">ไม่พบสถานที่ ลองแตะบนแผนที่แทน</li>
           )}
         </ul>
