@@ -159,6 +159,9 @@ where id = (select id from auth.users where email = '<อีเมลของ�
   `SUPABASE_ACCESS_TOKEN=sbp_... SUPABASE_PROJECT_REF=<Project ref> node scripts/setup-supabase.mjs migrate`
 - หรือ Supabase → **SQL Editor** → วางเนื้อหาไฟล์ใหม่ → Run
 
+ทางเดินเท้าใน มข. (`supabase/seed/footways.sql`) โหลดหลังถนนเสมอ (คำสั่ง `db` ทำให้แล้ว) ถ้านำเข้าถนนใหม่ ให้รันไฟล์นี้ซ้ำ
+อัปเดตรายชื่อตึก: `NODE_USE_ENV_PROXY=1 npx tsx scripts/import-buildings.ts` แล้ว push (ไฟล์อยู่ใน `public/data/`)
+
 ## 8. สิ่งที่ยังรอคุณตัดสินใจ
 
 - **คำต้องห้าม** สำหรับคะแนนสแปม: ใส่ใน `lib/config.ts` → `SPAM.bannedWords` (ตอนนี้ตรวจแค่ลิงก์)

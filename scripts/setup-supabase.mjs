@@ -3,7 +3,7 @@
 //
 //   export SUPABASE_ACCESS_TOKEN=sbp_...   # supabase.com/dashboard/account/tokens
 //   export SUPABASE_PROJECT_REF=abcd...    # from https://<ref>.supabase.co
-//   node scripts/setup-supabase.mjs db                 # migrations + roads
+//   node scripts/setup-supabase.mjs db                 # migrations + roads + campus footpaths
 //   node scripts/setup-supabase.mjs migrate            # new migrations only (after an update; keeps roads and posts)
 //   node scripts/setup-supabase.mjs auth               # site URL, redirect URLs (+ Google if GOOGLE_CLIENT_ID/SECRET set)
 //   node scripts/setup-supabase.mjs cron               # Vault secrets for the 15-minute refresh (prints CRON_SECRET)
@@ -49,10 +49,13 @@ const literal = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
 async function migrate() {
   const dir = join(ROOT, 'supabase/migrations');
-  const applied = new Set(((await api('GET', '/database/migrations')) ?? []).map((m) => m.name));
+  // The API lists {version, name}; migrations applied elsewhere (SQL editor, MCP) get other
+  // versions, so a file counts as applied when its version or its name matches.
+  const applied = new Set(((await api('GET', '/database/migrations')) ?? []).flatMap((m) => [m.version, m.name]));
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {
     const name = file.replace(/\.sql$/, '');
-    if (applied.has(name)) {
+    const [version, ...rest] = name.split('_');
+    if (applied.has(version) || applied.has(rest.join('_'))) {
       console.log(`= ${name} (already applied)`);
       continue;
     }
@@ -91,10 +94,12 @@ async function db() {
     batch += s;
   }
   await flush();
+  // Campus footpaths join the road graph after the roads (one transaction, ~180 KB).
+  await sql(readFileSync(join(ROOT, 'supabase/seed/footways.sql'), 'utf8'));
   const [c] = await sql(
-    'select (select count(*) from road_segments) segments, (select count(*) from road_nodes where routable) routable_nodes',
+    'select (select count(*) from road_segments) segments, (select count(*) from road_segments where foot_only) footpaths, (select count(*) from road_nodes where routable) routable_nodes',
   );
-  console.log(`\n✓ roads: ${c.segments} segments, ${c.routable_nodes} routable nodes`);
+  console.log(`\n✓ roads: ${c.segments} segments (${c.footpaths} footpaths), ${c.routable_nodes} routable nodes`);
 }
 
 async function auth() {
