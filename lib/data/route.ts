@@ -12,13 +12,14 @@ interface SegmentRow {
   name: string | null;
   length_m: number;
   speed_kmh: number;
+  foot: boolean; // campus footpath
   status: RoadStatus;
   risky: boolean;
   coords: LngLat[];
 }
 
 const toPath = (rows: SegmentRow[]): PathSegment[] =>
-  rows.map((r) => ({ id: r.id, name: r.name, lengthM: r.length_m, speedKmh: r.speed_kmh, status: r.status, risky: r.risky, coords: r.coords }));
+  rows.map((r) => ({ id: r.id, name: r.name ?? (r.foot ? 'ทางเดิน' : null), lengthM: r.length_m, speedKmh: r.speed_kmh, status: r.status, risky: r.risky, coords: r.coords }));
 
 export interface RouteResponse {
   routes: Route[]; // empty when no path exists at all
