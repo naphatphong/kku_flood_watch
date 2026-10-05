@@ -45,6 +45,11 @@ export const TRAFFIC = {
   ],
   closed: { label: 'ปิดถนน', color: '#1D1D1F' },
   incidentsCacheMinutes: 5, // one TomTom call per this many minutes, shared by every visitor
+  // "Avoid traffic" routes: the 15-minute refresh reads flow tiles at this zoom over the area
+  // (~25 tiles) and keeps roads slower than routeSlowBelow; time = length / (speed × level).
+  flowZoom: 14,
+  routeSlowBelow: 0.85,
+  routeMinLevel: 0.2, // closures and standstills count as this level (time × 5)
   delayChipMinutes: 1, // route cards show "รถติด +N นาที" from this delay up
   // TomTom iconCategory → Thai label
   incidentLabels: {
