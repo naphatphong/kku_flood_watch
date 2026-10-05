@@ -8,7 +8,7 @@ export interface ClassEntry {
   day: number; // 0 = Sunday … 6 = Saturday
   start: string; // "HH:MM"
   end: string;
-  place: PlaceRef;
+  place: PlaceRef | null; // null: no room given (online, or "- -" on the registrar)
   room: string | null;
 }
 
@@ -43,7 +43,7 @@ export function nextClass(classes: ClassEntry[], now: Date): { entry: ClassEntry
   return null;
 }
 
-export type EntryInput = Omit<ClassEntry, 'id' | 'place'> & { id?: string; place: PlaceRef | null };
+export type EntryInput = Omit<ClassEntry, 'id'> & { id?: string };
 
 /** Checks a class before it is saved; trims text. */
 export function validateEntry(input: EntryInput): { ok: true; entry: ClassEntry } | { ok: false; error: string } {
@@ -54,8 +54,8 @@ export function validateEntry(input: EntryInput): { ok: true; entry: ClassEntry 
   if (!TIME.test(input.start) || !TIME.test(input.end)) return { ok: false, error: 'ใส่เวลาเริ่มและเลิกเรียน' };
   if (minutesOf(input.end) <= minutesOf(input.start)) return { ok: false, error: 'เวลาเลิกต้องหลังเวลาเริ่ม' };
   const place = input.place;
-  if (!place || place.center?.length !== 2) return { ok: false, error: 'เลือกตึกที่เรียน' };
-  if (!place.name.trim()) return { ok: false, error: 'ตั้งชื่อสถานที่ที่เลือกบนแผนที่' };
+  if (place && place.center?.length !== 2) return { ok: false, error: 'เลือกตึกที่เรียนใหม่' };
+  if (place && !place.name.trim()) return { ok: false, error: 'ตั้งชื่อสถานที่ที่เลือกบนแผนที่' };
   return {
     ok: true,
     entry: {
@@ -65,7 +65,7 @@ export function validateEntry(input: EntryInput): { ok: true; entry: ClassEntry 
       day: input.day,
       start: input.start,
       end: input.end,
-      place: { ...place, name: place.name.trim() },
+      place: place && { ...place, name: place.name.trim() },
       room: input.room?.trim() || null,
     },
   };

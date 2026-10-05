@@ -17,7 +17,7 @@ export const PUBLIC_CACHE = { 'Cache-Control': 'public, s-maxage=5, stale-while-
 /** Per-IP fixed-window limit (PLAN §7). Returns a 429 response when over the limit. */
 export async function rateLimited(
   req: Request,
-  bucket: keyof Pick<typeof LIMITS, 'publicApi' | 'routeApi' | 'userActions'>,
+  bucket: keyof Pick<typeof LIMITS, 'publicApi' | 'routeApi' | 'userActions' | 'imageReads'>,
   key = clientIp(req),
 ) {
   if (!isSupabaseConfigured) return null;

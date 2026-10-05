@@ -233,6 +233,17 @@ export const LIMITS = {
   routeApi: { windowSeconds: 60, maxRequests: 20 },
   // Per user: every vote or flag triggers a recompute.
   userActions: { windowSeconds: 60, maxRequests: 20 },
+  // Per user: each timetable screenshot read is a paid Claude API call.
+  imageReads: { windowSeconds: 3600, maxRequests: 10 },
+};
+
+// Timetable import from the registrar (owner request, 5 Oct 2026). Screenshots are read by Claude
+// when the server has ANTHROPIC_API_KEY (SETUP.md); about 1 baht per read with this model and effort.
+export const REG_IMPORT = {
+  model: 'claude-opus-5-5',
+  effort: 'medium' as 'low' | 'medium' | 'high',
+  maxImageMB: 4, // upload limit (Vercel takes request bodies up to 4.5 MB; the page shrinks images first)
+  imageEdgePx: 2576, // longest edge sent; the model reads small text best at full size up to this
 };
 
 export const SPAM = {

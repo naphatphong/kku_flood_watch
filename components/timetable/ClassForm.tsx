@@ -67,7 +67,7 @@ export function ClassForm({
         </div>
       </Field>
 
-      <Field label="ตึกที่เรียน">
+      <Field label="ตึกที่เรียน" hint="เว้นได้ถ้าเรียนออนไลน์หรือยังไม่มีห้อง">
         {place ? (
           <div className="flex items-center gap-2 rounded-xl bg-accent/10 px-3 py-2.5 text-[15px] font-semibold text-link">
             <span className="min-w-0 grow truncate">{place.name || 'จุดที่เลือกบนแผนที่'}</span>

@@ -150,7 +150,17 @@ where id = (select id from auth.users where email = '<อีเมลของ�
 3. (แนะนำ) ในหน้าคีย์ เปิด **Domain whitelisting** ใส่ `kku-flood-watch.vercel.app` (เซิร์ฟเวอร์ของเว็บส่งโดเมนนี้ไปด้วย จึงใช้ได้ทั้งสองฝั่ง)
 4. Vercel → Environment Variables → `NEXT_PUBLIC_TOMTOM_KEY` = คีย์ (Production + Preview, ปิด Sensitive) → Redeploy
 
-## 7.3 อัปเดตฐานข้อมูลหลังอัปเดตเว็บ
+## 7.3 อ่านตารางเรียนจากภาพหน้าจอ (ไม่บังคับ)
+
+หน้าตารางเรียนนำเข้าจากระบบทะเบียนได้สองทาง: **คัดลอกตารางแล้ววาง** (ฟรี ใช้ได้เลย) และ **อ่านจากภาพหน้าจอ** ด้วย Claude
+ปุ่มอ่านภาพจะขึ้นเมื่อใส่คีย์แล้วเท่านั้น ใช้ได้เฉพาะคนที่ล็อกอิน คนละ 10 ครั้ง/ชั่วโมง (`LIMITS.imageReads`)
+ค่าใช้จ่ายประมาณ 1 บาทต่อภาพ (โมเดลและความละเอียดตั้งใน `lib/config.ts` → `REG_IMPORT`)
+
+1. สมัครที่ https://platform.claude.com → เติมเครดิต (Billing) แล้วตั้ง **Spend limit** รายเดือนกันค่าใช้จ่ายบานปลาย
+2. **API Keys** → Create Key → คัดลอก (`sk-ant-...`)
+3. Vercel → Environment Variables → `ANTHROPIC_API_KEY` = คีย์ (Production + Preview, **เปิด Sensitive ได้** เพราะใช้ฝั่งเซิร์ฟเวอร์เท่านั้น) → Redeploy
+
+## 7.4 อัปเดตฐานข้อมูลหลังอัปเดตเว็บ
 
 บางครั้งโค้ดใหม่มีไฟล์ใหม่ใน `supabase/migrations/` (เช่น `20260927000800_incidents.sql` สำหรับแจ้งเหตุบนถนน)
 ต้องรันไฟล์ใหม่ **ก่อน** เว็บเวอร์ชันใหม่ขึ้น ไม่งั้นหน้าเว็บจะโหลดข้อมูลไม่ได้ เลือกทางใดทางหนึ่ง:

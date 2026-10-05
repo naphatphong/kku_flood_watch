@@ -210,3 +210,34 @@ begin
     'walkers get no traffic path';
   perform public.replace_segment_traffic('[]');
 end $$;
+
+-- Shared building codes: everyone reads, only the server writes, admins delete.
+insert into public.building_codes (code, building_id, name, lng, lat) values ('CP09', null, 'อาคาร CP9', 102.82, 16.47);
+set role anon;
+do $$ begin
+  assert (select name from public.building_codes where code = 'CP09') = 'อาคาร CP9', 'anon reads codes';
+  begin
+    insert into public.building_codes (code, name, lng, lat) values ('SC08', 'x', 0, 0);
+    assert false, 'anon wrote a code';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+set role authenticated;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
+do $$ begin
+  begin
+    insert into public.building_codes (code, name, lng, lat) values ('SC08', 'x', 0, 0);
+    assert false, 'a user wrote a code directly';
+  exception when insufficient_privilege then null;
+  end;
+  delete from public.building_codes;
+  assert (select count(*) from public.building_codes) = 1, 'users cannot delete codes';
+end $$;
+set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
+do $$ begin
+  delete from public.building_codes where code = 'CP09';
+  assert (select count(*) from public.building_codes) = 0, 'admins delete codes';
+end $$;
+reset request.jwt.claim.sub;
+reset role;
