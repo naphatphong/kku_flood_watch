@@ -184,3 +184,13 @@ do $$ begin
 end $$;
 reset request.jwt.claim.sub;
 reset role;
+
+-- Campus footpaths: walkers only.
+do $$ declare p jsonb := '{"vehicle": "car", "walk_kmh": 5, "hard_factor": 3, "risky_min": 60, "risky_penalty": 0.5, "k": 3}';
+begin
+  update public.road_segments set foot_only = true where id = 12;
+  assert not exists (select 1 from public.route_edges(p) where id = 12), 'cars skip footpaths';
+  assert exists (select 1 from public.route_edges(p || '{"vehicle": "walk"}') where id = 12), 'walkers use footpaths';
+  assert (public.route_paths('[["safe", 1, 1, 12, 1]]', p) #>> '{safe,0,0,foot}')::boolean, 'paths say which pieces are footpaths';
+  update public.road_segments set foot_only = false where id = 12;
+end $$;
