@@ -6,6 +6,7 @@ import { ActionButton } from '@/components/admin/ActionButton';
 import { PostCard } from '@/components/admin/PostCard';
 import { ChevronIcon, SearchIcon, UserIcon } from '@/components/ui/icons';
 import { getViewer } from '@/lib/auth';
+import { listBuildingCodes } from '@/lib/data/building-codes';
 import { getFlaggedQueue, getLogs, getQueueCounts, getReviewQueue, getUserHistory, getUsers, type AdminUser } from '@/lib/data/admin';
 import { clock, timeAgo } from '@/lib/format';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
@@ -102,6 +103,7 @@ export default async function AdminPage({ searchParams }: Props) {
     { id: 'review', label: 'รออนุมัติ', badge: counts.pending },
     { id: 'flagged', label: 'ถูกรีพอร์ต', badge: counts.hidden },
     { id: 'users', label: 'ผู้ใช้' },
+    { id: 'codes', label: 'รหัสตึก' },
     { id: 'log', label: 'ประวัติ' },
   ];
 
@@ -138,6 +140,35 @@ export default async function AdminPage({ searchParams }: Props) {
         </form>
         {users.length ? users.map((u) => <UserSummary key={u.id} user={u} link />) : <Empty>ไม่พบผู้ใช้</Empty>}
       </>
+    );
+  } else if (tab === 'codes') {
+    const codes = await listBuildingCodes();
+    body = (
+      <Section title={`รหัสตึกจากตารางเรียนที่ผู้ใช้ปักไว้ (${codes.length}) · ลบอันที่ผิด แล้วคนถัดไปจะปักใหม่`}>
+        {codes.length ? (
+          <ul className="rounded-2xl bg-white/85 px-4 shadow-sm ring-1 ring-separator">
+            {codes.map((c) => (
+              <li key={c.code} className="flex items-center gap-3 border-b border-separator py-3 text-[14px] last:border-0">
+                <span className="w-14 shrink-0 font-bold">{c.code}</span>
+                <span className="min-w-0 grow">
+                  <a
+                    href={`https://www.google.com/maps?q=${c.lat},${c.lng}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block truncate font-semibold text-link"
+                  >
+                    {c.name}
+                  </a>
+                  <span className="block text-[12px] text-secondary">{timeAgo(c.created_at)}</span>
+                </span>
+                <ActionButton endpoint={`/api/admin/building-codes/${c.code}`} action="delete" label="ลบ" tone="danger" confirm="ยืนยันลบ" />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <Empty>ยังไม่มีรหัสตึกที่ผู้ใช้ปักไว้</Empty>
+        )}
+      </Section>
     );
   } else if (tab === 'log') {
     const logs = await getLogs();

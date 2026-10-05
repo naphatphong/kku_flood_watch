@@ -56,7 +56,7 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
   const today = useMemo(() => classesOn(classes, bangkokClock(now).day), [classes, now]);
   // The selected building, or else today's classes numbered in order.
   const highlights = useMemo(
-    () => (building ? [buildingHighlight(building)] : today.map((c, i) => placeHighlight(c.place, buildings, String(i + 1), c.id))),
+    () => (building ? [buildingHighlight(building)] : today.flatMap((c, i) => (c.place ? [placeHighlight(c.place, buildings, String(i + 1), c.id)] : []))),
     [building, today, buildings],
   );
   const close = () => setSelection(null);

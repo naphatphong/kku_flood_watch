@@ -149,11 +149,17 @@ https://vercel.com → project **kku-flood-watch** → **Settings → Environmen
 3. Vercel → Environment Variables → `NEXT_PUBLIC_TOMTOM_KEY` = คีย์ (Production + Preview, **ปิด Sensitive**) → Redeploy
 4. ตรวจ: แผนที่มีปุ่มไฟจราจรและกล่อง "จราจร" มุมขวาบน · `https://kku-flood-watch.vercel.app/api/traffic` ต้องได้ `{"incidents":[...]}` ไม่ใช่ error
 
+## ขั้น 8.3: อ่านตารางเรียนจากภาพ (ทำเมื่อเจ้าของต้องการ)
+
+1. เจ้าของสมัคร https://platform.claude.com เติมเครดิต และตั้ง Spend limit เอง (เรื่องเงิน ห้ามทำแทน)
+2. **API Keys** → Create Key → Vercel → Environment Variables → `ANTHROPIC_API_KEY` = คีย์ (Production + Preview, เปิด Sensitive ได้) → Redeploy
+3. ตรวจ: ล็อกอิน → `/timetable` → นำเข้าจากทะเบียน → มีปุ่ม "อ่านจากภาพหน้าจอ" → ส่งภาพตารางเรียนแล้วได้รายการวิชา
+
 ## ขั้น 9: ตรวจว่าใช้งานได้
 
 ```bash
 CRON_SECRET='...' node scripts/setup-supabase.mjs refresh   # ต้องได้ 200 และ {"ok":true,...}
-node scripts/setup-supabase.mjs check                        # migrations 11, road_segments 23067 (รวมทางเดิน 1229), cron_jobs 1, vault_secrets 2, rain_rows ≥ 1
+node scripts/setup-supabase.mjs check                        # migrations 12, road_segments 23067 (รวมทางเดิน 1229), cron_jobs 1, vault_secrets 2, rain_rows ≥ 1
 ```
 
 ในเบราว์เซอร์:

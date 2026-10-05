@@ -16,17 +16,19 @@ export function NextClass({ classes, now }: { classes: ClassEntry[]; now: Date }
           {entry.start} · {entry.course}
         </span>
         <span className="block truncate text-[13px] opacity-90">
-          {entry.place.name}
+          {entry.place?.name ?? 'ไม่ระบุตึก'}
           {entry.room ? ` · ห้อง ${entry.room}` : ''}
         </span>
       </span>
-      <Link
-        href={navigateHref(entry.place)}
-        className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 text-[14px] font-semibold text-link"
-      >
-        <RouteIcon size={16} />
-        นำทาง
-      </Link>
+      {entry.place && (
+        <Link
+          href={navigateHref(entry.place)}
+          className="flex h-10 shrink-0 items-center gap-1.5 rounded-full bg-white px-3.5 text-[14px] font-semibold text-link"
+        >
+          <RouteIcon size={16} />
+          นำทาง
+        </Link>
+      )}
     </section>
   );
 }

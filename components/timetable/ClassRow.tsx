@@ -13,7 +13,7 @@ export function ClassRow({ entry, n, onEdit }: { entry: ClassEntry; n: number; o
           {entry.start}–{entry.end} · {entry.course}
         </span>
         <span className="block truncate text-xs text-secondary">
-          {[entry.title, entry.place.name, entry.room && `ห้อง ${entry.room}`].filter(Boolean).join(' · ')}
+          {[entry.title, entry.place?.name ?? 'ไม่ระบุตึก', entry.room && `ห้อง ${entry.room}`].filter(Boolean).join(' · ')}
         </span>
       </span>
     </>
@@ -27,13 +27,15 @@ export function ClassRow({ entry, n, onEdit }: { entry: ClassEntry; n: number; o
       ) : (
         <span className="flex min-w-0 grow items-center gap-3">{body}</span>
       )}
-      <Link
-        href={navigateHref(entry.place)}
-        aria-label={`นำทางไป ${entry.place.name}`}
-        className="grid size-9 shrink-0 place-items-center rounded-full bg-accent/10 text-link"
-      >
-        <RouteIcon size={17} />
-      </Link>
+      {entry.place && (
+        <Link
+          href={navigateHref(entry.place)}
+          aria-label={`นำทางไป ${entry.place.name}`}
+          className="grid size-9 shrink-0 place-items-center rounded-full bg-accent/10 text-link"
+        >
+          <RouteIcon size={17} />
+        </Link>
+      )}
     </li>
   );
 }

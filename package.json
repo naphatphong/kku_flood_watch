@@ -9,6 +9,7 @@
     "test:db": "supabase/tests/run-local.sh"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
     "@mapbox/vector-tile": "^2.0.5",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",

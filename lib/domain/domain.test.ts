@@ -15,6 +15,7 @@ import { chainLengthM, toggleSegment, type ChainSegment } from './road-chain';
 import { segmentStatuses } from './segments';
 import { spamCheck } from './spam';
 import { parseIncidents, tileRange } from './traffic';
+import { codeKey, dayOf, parseRegCell, parseRegGrid, parseRegTables, placeForCode, regClassesFrom } from './reg-import';
 import { classesOn, nextClass, validateEntry, whenLabel, type ClassEntry } from './timetable';
 import type { Report } from './types';
 import { EMPTY_USER_DATA, isSaved, newer, readUserData, toggleSaved } from './user-data';
@@ -481,6 +482,8 @@ test('timetable: validation, the day list and the next class (Bangkok time)', ()
   assert.equal(validateEntry({ ...base, start: '9:00' }).ok, false);
   assert.equal(validateEntry({ ...base, day: 7 }).ok, false);
   assert.equal(validateEntry({ ...base, course: '' }).ok, false);
+  assert.equal(validateEntry({ ...base, place: { id: null, name: ' ', center: ORIGIN } }).ok, false); // map pick needs a name
+  assert.ok(validateEntry({ ...base, place: null }).ok); // no room (online class)
 
   const c = (id: string, day: number, start: string, end: string): ClassEntry => ({ ...base, id, course: id, title: null, room: null, day, start, end });
   const week = [c('mon-pm', 1, '13:00', '16:00'), c('mon-am', 1, '09:00', '12:00'), c('wed', 3, '08:00', '10:00')];
@@ -505,4 +508,64 @@ test('flow tiles covering the area', () => {
   const tiles = tileRange([102.81, 16.45, 102.82, 16.46], 14);
   assert.ok(tiles.length >= 1 && tiles.length <= 4);
   assert.deepEqual(tileRange([102.8173, 16.4617, 102.8173, 16.4617], 14), [[12871, 7432]]);
+});
+
+test('reg import: grid cells by colspan → day, start and end', () => {
+  // Like reg.kku.ac.th: hourly header, 15-minute columns (4 per hour), 8:00–17:00.
+  const head = [{ text: 'Day/Time', span: 1 }, ...Array.from({ length: 9 }, (_, i) => ({ text: `${8 + i}:00-${9 + i}:00`, span: 4 }))];
+  const gap = (n: number) => Array.from({ length: n }, () => ({ text: ' ', span: 1 }));
+  const rows = [
+    [{ text: 'ตารางเรียน', span: 37 }],
+    head,
+    [{ text: 'Mon', span: 1 }, ...gap(4), { text: 'SC401201 (3) 1,\nSC8304 SC8', span: 4 }, { text: 'SC602005 (3) 2, SC5102 SC5', span: 8 }, ...gap(4), { text: 'GE341511 (3) 91, - -', span: 12 }, ...gap(4)],
+    [{ text: 'Tue', span: 1, rowSpan: 2 }, ...gap(28), { text: 'CP411106 (3) 2, CP9127 CP9', span: 8 }],
+    [{ text: 'LI101001 (3) 77, SC6204 SC6', span: 4 }],
+    [{ text: 'พฤหัสบดี', span: 1 }, ...gap(8), { text: 'CP411701 (2) 1, SC8103 SC8', span: 7 }],
+    [{ text: 'Sat', span: 1 }, ...gap(36)],
+  ];
+  const got = parseRegGrid(rows);
+  assert.deepEqual(
+    got.map((c) => `${c.day} ${c.start}-${c.end} ${c.course}/${c.section} ${c.room} ${c.building}`),
+    [
+      '1 09:00-10:00 SC401201/1 SC8304 SC8',
+      '1 10:00-12:00 SC602005/2 SC5102 SC5',
+      '1 13:00-16:00 GE341511/91 null null',
+      '2 08:00-09:00 LI101001/77 SC6204 SC6',
+      '2 15:00-17:00 CP411106/2 CP9127 CP9',
+      '4 10:00-11:45 CP411701/1 SC8103 SC8',
+    ],
+  );
+  assert.deepEqual(parseRegTables([[[{ text: 'layout', span: 1 }]], rows]), got); // skips tables without a timetable
+  assert.deepEqual(parseRegGrid([[{ text: 'no times', span: 1 }]]), []);
+});
+
+test('reg import: day labels and cells', () => {
+  assert.deepEqual(['Mon', 'วันอังคาร', 'อา.', 'อ.', 'พ.', 'พฤ.', 'เสาร์', 'Day/Time', 'SA101001'].map(dayOf), [1, 2, 0, 2, 3, 4, 6, null, null]);
+  assert.deepEqual(parseRegCell('sc9228  sc09'), null); // no course code
+  assert.deepEqual(parseRegCell('CP411106 (3) 2, SC9228 SC09'), { course: 'CP411106', section: '2', room: 'SC9228', building: 'SC09' });
+  assert.deepEqual(parseRegCell('000101 (3) 1, SC09'), { course: '000101', section: '1', room: null, building: 'SC09' });
+});
+
+test('reg import: screenshot rows are checked and building codes resolve', () => {
+  const rows = regClassesFrom({
+    classes: [
+      { course: 'sc401201', section: '1', day: 'Mon', start: '9:00', end: '12:00', room: 'SC8304', building: 'SC8' },
+      { course: 'GE341511', section: '91', day: 'Mon', start: '13:00', end: '16:00', room: '-', building: '' },
+      { course: 'X', day: 'Funday', start: '9:00', end: '10:00' },
+      { course: 'Y', day: 'Tue', start: '12:00', end: '11:00' },
+    ],
+  });
+  assert.deepEqual(rows, [
+    { course: 'SC401201', section: '1', day: 1, start: '09:00', end: '12:00', room: 'SC8304', building: 'SC8' },
+    { course: 'GE341511', section: '91', day: 1, start: '13:00', end: '16:00', room: null, building: null },
+  ]);
+  assert.deepEqual(regClassesFrom('nope'), []);
+
+  const sc08: Building = { id: 'w8', name: 'อาคารเรียน SC08', nameEn: null, code: 'SC08', kind: 'building', levels: null, center: ORIGIN, polygon: null };
+  const cp09 = { id: null, name: 'อาคาร CP9', center: ORIGIN };
+  assert.equal(codeKey('SC 8'), 'SC08');
+  assert.equal(placeForCode('SC8', [sc08], {})?.id, 'w8');
+  assert.equal(placeForCode('CP9', [sc08], { CP09: cp09 }), cp09);
+  assert.equal(placeForCode('CP9', [sc08], {}), null);
+  assert.equal(placeForCode(null, [sc08], {}), null);
 });
