@@ -194,3 +194,19 @@ begin
   assert (public.route_paths('[["safe", 1, 1, 12, 1]]', p) #>> '{safe,0,0,foot}')::boolean, 'paths say which pieces are footpaths';
   update public.road_segments set foot_only = false where id = 12;
 end $$;
+
+-- Avoid traffic: slow lines are matched to the segments they cover; the fast path goes around.
+do $$ declare
+  p jsonb := '{"vehicle": "car", "walk_kmh": 5, "hard_factor": 3, "risky_min": 60, "risky_penalty": 0.5, "k": 3, "traffic_min": 0.2}';
+  r jsonb;
+begin
+  assert (public.route_candidates('[[102.8170, 16.4617], [102.8182, 16.4617]]', p) -> 'fast') = 'null'::jsonb, 'no traffic data, no fast path';
+  assert public.replace_segment_traffic('[{"level": 0.1, "coords": [[102.8170, 16.4617], [102.8182, 16.4617]]}]') = 2,
+    'a slow line covers both straight segments';
+  r := public.route_candidates('[[102.8170, 16.4617], [102.8182, 16.4617]]', p);
+  assert (select array_agg((x ->> 'id')::int) from jsonb_array_elements(r -> 'fast') x) = array[12], 'fast path avoids the slow road';
+  assert abs((r #>> '{plain,0,traffic}')::float8 - 0.1) < 0.001, 'paths carry the traffic level';
+  assert (public.route_candidates('[[102.8170, 16.4617], [102.8182, 16.4617]]', p || '{"vehicle": "walk"}') -> 'fast') = 'null'::jsonb,
+    'walkers get no traffic path';
+  perform public.replace_segment_traffic('[]');
+end $$;

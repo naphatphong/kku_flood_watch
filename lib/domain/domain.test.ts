@@ -14,7 +14,7 @@ import { blockedAhead, buildSteps, googleMapsUrl, incidentsAlong, insertVia, nea
 import { chainLengthM, toggleSegment, type ChainSegment } from './road-chain';
 import { segmentStatuses } from './segments';
 import { spamCheck } from './spam';
-import { parseIncidents } from './traffic';
+import { parseIncidents, tileRange } from './traffic';
 import { classesOn, nextClass, validateEntry, whenLabel, type ClassEntry } from './timetable';
 import type { Report } from './types';
 import { EMPTY_USER_DATA, isSaved, newer, readUserData, toggleSaved } from './user-data';
@@ -319,6 +319,15 @@ test('route cards: safest, balanced if faster, shortest if faster, else merged',
   assert.deepEqual(kinds(pickRoutes([line(1, 6000), line(2, 5900)], line(4, 5800), 'car')), ['safest+shortest']);
   assert.deepEqual(kinds(pickRoutes([], line(4, 4000), 'car')), ['shortest']);
   assert.deepEqual(pickRoutes([], null, 'car'), []);
+
+  // Traffic: a jammed safest path makes room for an "avoid traffic" card; times count the jam.
+  const jammed = [seg(1, null, ORIGIN, destination(ORIGIN, 3000, 0), { trafficLevel: 0.25 })];
+  const around = line(5, 4000);
+  const rs = pickRoutes([jammed], null, 'car', around);
+  assert.deepEqual(kinds(rs), ['safest', 'traffic']);
+  assert.ok(rs[0].durationS > rs[1].durationS);
+  assert.deepEqual(kinds(pickRoutes([line(1, 3000)], null, 'car', around)), ['safest']); // no jam, no card
+  assert.equal(pickRoutes([jammed], null, 'walk')[0].durationS, Math.round(3000 / (5 / 3.6))); // walkers ignore traffic
 });
 
 test('Google Maps link follows the route through waypoints', () => {
@@ -484,4 +493,11 @@ test('timetable: validation, the day list and the next class (Bangkok time)', ()
   assert.equal(whenLabel(-5, 1, 1), 'กำลังเรียน');
   assert.equal(whenLabel(900, 2, 1), 'พรุ่งนี้');
   assert.equal(whenLabel(3000, 3, 1), 'วันพุธ');
+});
+
+test('flow tiles covering the area', () => {
+  // z14 tiles over a 1 km box around the campus: a few tiles, all within the box's corners.
+  const tiles = tileRange([102.81, 16.45, 102.82, 16.46], 14);
+  assert.ok(tiles.length >= 1 && tiles.length <= 4);
+  assert.deepEqual(tileRange([102.8173, 16.4617, 102.8173, 16.4617], 14), [[12871, 7432]]);
 });

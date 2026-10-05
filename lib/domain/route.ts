@@ -1,10 +1,10 @@
 // Route choice and directions (PLAN §6). The graph search runs in PostGIS/pgRouting
 // (route_candidates); this turns its paths into the route cards, turn list and hand-off links.
-import { INCIDENT_POST, MAP, ROUTING, VEHICLES, type RoadStatus, type Vehicle } from '../config';
+import { INCIDENT_POST, MAP, ROUTING, TRAFFIC, VEHICLES, type RoadStatus, type Vehicle } from '../config';
 import { bearing, distanceM, distanceToLineM, lineLengthM, pointAlong, type LngLat } from './geo';
 import { insideArea } from './report-input';
 
-export type RouteKind = 'safest' | 'balanced' | 'shortest';
+export type RouteKind = 'safest' | 'balanced' | 'traffic' | 'shortest';
 export type Avoid = 'blocked' | 'hard'; // avoid only "blocked", or "hard" as well
 
 /** One road segment of a path, oriented in the direction of travel. */
@@ -13,6 +13,7 @@ export interface PathSegment {
   name: string | null;
   lengthM: number;
   speedKmh: number;
+  trafficLevel?: number; // share of free-flow speed (TomTom), 1 or missing = free
   status: RoadStatus; // for the chosen vehicle
   risky: boolean; // inside a high-risk flood circle
   coords: LngLat[];
@@ -118,7 +119,8 @@ export function routeEnds(from: LngLat, to: LngLat) {
 
 // ---- Paths to routes ------------------------------------------------------------
 
-const speedMps = (s: PathSegment, vehicle: Vehicle) => (vehicle === 'walk' ? ROUTING.walkSpeedKmh : s.speedKmh) / 3.6;
+const speedMps = (s: PathSegment, vehicle: Vehicle) =>
+  (vehicle === 'walk' ? ROUTING.walkSpeedKmh : s.speedKmh * Math.max(s.trafficLevel ?? 1, TRAFFIC.routeMinLevel)) / 3.6;
 
 /** Distance, time, flood exposure and geometry of one path. */
 export function summarize(path: PathSegment[], vehicle: Vehicle): Omit<Route, 'kinds'> {
@@ -155,10 +157,11 @@ export function summarize(path: PathSegment[], vehicle: Vehicle): Omit<Route, 'k
 
 /**
  * Route cards: the safest path (flood cost), the fastest of the other k paths as "balanced",
- * and the plain shortest path. A card is kept only if it saves minSavingPct of the time of
- * every card before it; a shortest path that doesn't just labels the card it matches.
+ * the traffic-aware path as "avoid traffic", and the plain shortest path. Times count current
+ * traffic. A card is kept only if it saves minSavingPct of the time of every card before it;
+ * a shortest path that doesn't just labels the card it matches.
  */
-export function pickRoutes(safe: PathSegment[][], plain: PathSegment[] | null, vehicle: Vehicle): Route[] {
+export function pickRoutes(safe: PathSegment[][], plain: PathSegment[] | null, vehicle: Vehicle, fast: PathSegment[] | null = null): Route[] {
   const routes: Route[] = [];
   const faster = (r: Omit<Route, 'kinds'>) =>
     routes.every((x) => r.durationS <= x.durationS * (1 - ROUTING.minSavingPct / 100));
@@ -171,6 +174,10 @@ export function pickRoutes(safe: PathSegment[][], plain: PathSegment[] | null, v
       .filter(faster)
       .sort((a, b) => a.durationS - b.durationS)[0];
     if (balanced) routes.push({ kinds: ['balanced'], ...balanced });
+  }
+  if (fast?.length) {
+    const avoiding = summarize(fast, vehicle);
+    if (faster(avoiding)) routes.push({ kinds: ['traffic'], ...avoiding });
   }
   if (plain?.length) {
     const shortest = summarize(plain, vehicle);

@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
-import { recompute, refreshRain } from '@/lib/data/refresh';
+import { TRAFFIC } from '@/lib/config';
+import { recompute, refreshRain, refreshTraffic } from '@/lib/data/refresh';
 import { errorJson } from '@/lib/http';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isSupabaseConfigured } from '@/lib/supabase/env';
@@ -14,7 +15,7 @@ function authorized(req: Request) {
 
 /**
  * Called every 15 minutes by pg_cron (supabase/migrations/..._platform.sql):
- * fetch rain, then recompute flood circles, road statuses and the hourly snapshot.
+ * fetch rain and traffic, then recompute flood circles, road statuses and the hourly snapshot.
  */
 export async function POST(req: Request) {
   if (!isSupabaseConfigured) return errorJson(503, 'Supabase is not configured');
@@ -25,8 +26,14 @@ export async function POST(req: Request) {
       console.error('rain fetch failed, recomputing with the last stored rain', e);
       return null;
     });
+    const slowSegments = TRAFFIC.key
+      ? await refreshTraffic(db).catch((e) => {
+          console.error('traffic fetch failed, keeping the last traffic', e);
+          return null;
+        })
+      : null;
     const result = await recompute(db);
-    return Response.json({ ok: true, rain: rain && { r3: rain.r3, r24: rain.r24, rainyDays: rain.rainyDays }, ...result });
+    return Response.json({ ok: true, rain: rain && { r3: rain.r3, r24: rain.r24, rainyDays: rain.rainyDays }, slowSegments, ...result });
   } catch (e) {
     console.error(e);
     return errorJson(500, 'refresh failed');

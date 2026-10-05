@@ -41,3 +41,13 @@ export function parseIncidents(body: { incidents?: TomTomIncident[] }): Incident
     };
   });
 }
+
+/** Slippy-map tiles (x, y) at zoom z that cover a bbox. */
+export function tileRange([west, south, east, north]: [number, number, number, number], z: number): [number, number][] {
+  const n = 2 ** z;
+  const x = (lng: number) => Math.floor(((lng + 180) / 360) * n);
+  const y = (lat: number) => Math.floor(((1 - Math.asinh(Math.tan((lat * Math.PI) / 180)) / Math.PI) / 2) * n);
+  const tiles: [number, number][] = [];
+  for (let tx = x(west); tx <= x(east); tx++) for (let ty = y(north); ty <= y(south); ty++) tiles.push([tx, ty]);
+  return tiles;
+}

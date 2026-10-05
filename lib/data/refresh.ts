@@ -8,6 +8,7 @@ import { segmentStatuses } from '../domain/segments';
 import type { Report, ReportKind } from '../domain/types';
 import { activeCutoff } from './map';
 import { fetchRain } from './rain';
+import { fetchSlowRoads } from './traffic';
 
 interface ActiveRow {
   id: number;
@@ -62,6 +63,12 @@ export async function refreshRain(db: SupabaseClient) {
     }),
   );
   return r;
+}
+
+/** Matches TomTom's slow and closed roads to road segments for "avoid traffic" routes. */
+export async function refreshTraffic(db: SupabaseClient) {
+  const roads = await fetchSlowRoads();
+  return must(await db.rpc('replace_segment_traffic', { p_lines: roads })) as number;
 }
 
 /**
