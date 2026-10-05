@@ -10,7 +10,7 @@ import { rainScore, summarizeRain } from './rain';
 import { insideArea, parseReportForm } from './report-input';
 import { watchCircles } from './watch';
 import { dayAlerts, forecastDays, weatherInfo, type DayInput } from './weather';
-import { blockedAhead, buildSteps, googleMapsUrl, incidentsAlong, insertVia, nearestIndex, parseRouteQuery, pickRoutes, routeEnds, summarize, type PathSegment } from './route';
+import { blockedAhead, buildSteps, googleMapsUrl, incidentsAlong, insertVia, keepFaster, nearestIndex, parseRouteQuery, pickRoutes, routeEnds, summarize, type PathSegment } from './route';
 import { chainLengthM, toggleSegment, type ChainSegment } from './road-chain';
 import { segmentStatuses } from './segments';
 import { spamCheck } from './spam';
@@ -328,6 +328,11 @@ test('route cards: safest, balanced if faster, shortest if faster, else merged',
   assert.ok(rs[0].durationS > rs[1].durationS);
   assert.deepEqual(kinds(pickRoutes([line(1, 3000)], null, 'car', around)), ['safest']); // no jam, no card
   assert.equal(pickRoutes([jammed], null, 'walk')[0].durationS, Math.round(3000 / (5 / 3.6))); // walkers ignore traffic
+
+  // Live times can undo a card: TomTom says the "avoid traffic" path is slower after all.
+  const timed = (durationS: number, kind: 'safest' | 'traffic' | 'shortest') => ({ ...rs[0], kinds: [kind], durationS });
+  assert.deepEqual(kinds(keepFaster([timed(800, 'safest'), timed(820, 'traffic'), timed(600, 'shortest')])), ['safest', 'shortest']);
+  assert.deepEqual(kinds(keepFaster([timed(800, 'safest'), timed(700, 'traffic')])), ['safest', 'traffic']);
 });
 
 test('Google Maps link follows the route through waypoints', () => {
