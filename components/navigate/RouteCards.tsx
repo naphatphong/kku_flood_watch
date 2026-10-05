@@ -5,7 +5,7 @@ import { ROAD_STATUS, TRAFFIC } from '@/lib/config';
 import type { Route, RouteKind } from '@/lib/domain/route';
 import { distance, duration } from '@/lib/format';
 
-const KIND: Record<RouteKind, string> = { safest: 'ปลอดภัยสุด', balanced: 'สมดุล', shortest: 'สั้นสุด' };
+const KIND: Record<RouteKind, string> = { safest: 'ปลอดภัยสุด', balanced: 'สมดุล', traffic: 'เลี่ยงรถติด', shortest: 'สั้นสุด' };
 const title = (r: Route) =>
   r.kinds.includes('safest') && r.kinds.includes('shortest') ? 'ปลอดภัยและสั้นสุด' : KIND[r.kinds[0]];
 
