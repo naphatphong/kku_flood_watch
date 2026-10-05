@@ -2,8 +2,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { MAP, SCORE } from '../config';
+import { buildingCode, searchBuildings, type Building } from './buildings';
 import { buildClusters, groupReports, isFlooded, lowFactor, scoreCluster } from './cluster';
-import { destination, distanceM, type LngLat } from './geo';
+import { destination, distanceM, insidePolygon, type LngLat } from './geo';
 import { expiresAt, isActive, postScore, postWeight, voteMultiplier } from './post';
 import { rainScore, summarizeRain } from './rain';
 import { insideArea, parseReportForm } from './report-input';
@@ -15,6 +16,7 @@ import { segmentStatuses } from './segments';
 import { spamCheck } from './spam';
 import { parseIncidents } from './traffic';
 import type { Report } from './types';
+import { EMPTY_USER_DATA, isSaved, newer, readUserData, toggleSaved } from './user-data';
 
 const NOW = new Date('2026-09-27T07:00:00Z'); // 14:00 in Bangkok
 const HOUR = 3_600_000;
@@ -410,4 +412,46 @@ test('incident posts expire sooner; route warnings list incidents near the route
     incidentsAlong(line, [near(800, 20, 'b'), near(500, 200, 'far'), near(100, -30, 'a')]).map((i) => i.label),
     ['a', 'b'],
   );
+});
+
+test('building codes and search: Thai, English, codes with or without zeros', () => {
+  assert.equal(buildingCode('อาคารเรียนรวมและปฏิบัติการ SC. 09'), 'SC09');
+  assert.equal(buildingCode('HS.2'), 'HS02');
+  assert.equal(buildingCode('หอพักนักศึกษาที่ 26'), null);
+
+  const b = (id: string, name: string, code: string | null = null, kind: Building['kind'] = 'building'): Building => ({
+    id, name, nameEn: null, code, kind, levels: null, center: ORIGIN, polygon: null,
+  });
+  const list = [
+    b('a', 'อาคารเรียนรวมและปฏิบัติการ SC. 09', 'SC09'),
+    b('b', 'SC. 03', 'SC03'),
+    b('c', 'คณะวิศวกรรมศาสตร์', null, 'faculty'),
+    b('d', 'หอพักนักศึกษาที่ 9', null, 'dorm'),
+  ];
+  assert.deepEqual(searchBuildings(list, 'sc9').map((x) => x.id), ['a']);
+  assert.deepEqual(searchBuildings(list, 'ตึก SC 09').map((x) => x.id), ['a']); // "ตึก" is ignored
+  assert.deepEqual(searchBuildings(list, 'คณะวิศวะ').map((x) => x.id), ['c']);
+  assert.deepEqual(searchBuildings(list, 'sc').map((x) => x.id).sort(), ['a', 'b']);
+  assert.deepEqual(searchBuildings(list, 'ไม่มีตึกนี้'), []);
+  assert.deepEqual(searchBuildings(list, '  '), []);
+});
+
+test('saved places and device/account copies', () => {
+  const sq: LngLat[] = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]];
+  assert.equal(insidePolygon([0.5, 0.5], sq), true);
+  assert.equal(insidePolygon([1.5, 0.5], sq), false);
+
+  const p = { id: 'w1', name: 'SC09', center: ORIGIN };
+  const saved = toggleSaved([], p);
+  assert.equal(isSaved(saved, { ...p, name: 'renamed' }), true); // same building id
+  assert.deepEqual(toggleSaved(saved, p), []);
+  const pin = { id: null, name: 'จุดนัด', center: ORIGIN };
+  assert.equal(isSaved(toggleSaved([], pin), { ...pin }), true);
+
+  assert.deepEqual(readUserData('junk'), EMPTY_USER_DATA);
+  assert.deepEqual(readUserData({ saved: [p], classes: 'x', updatedAt: 5 }), { saved: [p], classes: [], updatedAt: 5 });
+  const a = { ...EMPTY_USER_DATA, updatedAt: 10 };
+  const c = { ...EMPTY_USER_DATA, saved: [p], updatedAt: 20 };
+  assert.equal(newer(a, c), c);
+  assert.equal(newer(c, a), c);
 });

@@ -2,21 +2,29 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
 import { UserMenu } from '@/components/auth/UserMenu';
 import type { Selection } from '@/components/map/FloodMap';
-import { SearchIcon } from '@/components/ui/icons';
+import type { Highlight } from '@/components/map/place-layer';
 import { Segmented } from '@/components/ui/Segmented';
 import type { Viewer } from '@/lib/auth';
 import { DEFAULT_VEHICLE, VEHICLES, type Vehicle } from '@/lib/config';
+import { buildingHeightM, navigateHref, type Building } from '@/lib/domain/buildings';
+import { insidePolygon } from '@/lib/domain/geo';
+import { useBuildings } from '@/lib/hooks/useBuildings';
 import { useMapData } from '@/lib/hooks/useMapData';
+import { useUserData } from '@/lib/hooks/useUserData';
 import { ActionBar } from './ActionBar';
+import { BuildingDetail } from './BuildingDetail';
+import { BuildingSearch } from './BuildingSearch';
 import { Panel } from '@/components/ui/Panel';
 import { PanelHeader } from './PanelHeader';
 import { IncidentList } from './IncidentList';
 import { RainCard } from './RainCard';
 import { ReportDetail } from './ReportDetail';
 import { RoadLegend } from './RoadLegend';
+import { SavedPlaces } from './SavedPlaces';
 import { ZoneDetail } from './ZoneDetail';
 import { WatchDetail } from './WatchDetail';
 import { WatchList } from './WatchList';
@@ -25,8 +33,20 @@ import { ZoneList } from './ZoneList';
 const FloodMap = dynamic(() => import('@/components/map/FloodMap'), { ssr: false });
 const VEHICLE_TABS = VEHICLES.map((v) => ({ id: v.id, label: v.short }));
 
+const toHighlight = (b: Building, label: string | null = null): Highlight => ({
+  key: b.id,
+  name: b.code ?? (b.name.length > 28 ? `${b.name.slice(0, 27)}…` : b.name),
+  label,
+  center: b.center,
+  polygon: b.polygon,
+  heightM: buildingHeightM(b),
+});
+
 export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: string | null }) {
   const { zones, reports, segments, error } = useMapData();
+  const buildings = useBuildings();
+  const { saved } = useUserData();
+  const router = useRouter();
   const [vehicle, setVehicle] = useState<Vehicle>(DEFAULT_VEHICLE);
   const [selection, setSelection] = useState<Selection>(null);
   const [expanded, setExpanded] = useState(false);
@@ -37,7 +57,10 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
   const cluster = selection?.type === 'cluster' ? clusters.find((c) => c.id === selection.id) : undefined;
   const report = selection?.type === 'report' ? pins.find((r) => r.id === selection.id) : undefined;
   const watchSpot = selection?.type === 'watch' ? watch.find((w) => w.id === selection.id) : undefined;
+  const building = selection?.type === 'building' ? buildings.find((b) => b.id === selection.id) : undefined;
+  const highlights = useMemo(() => (building ? [toHighlight(building)] : []), [building]);
   const close = () => setSelection(null);
+  const pick = (b: Building) => setSelection({ type: 'building', id: b.id });
 
   return (
     <main className="relative h-dvh overflow-hidden">
@@ -47,20 +70,33 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
         reports={pins}
         segments={segments}
         vehicle={vehicle}
+        highlights={highlights}
         selection={selection}
         onSelect={setSelection}
+        onMapClick={(p) => {
+          // A tap on a named building selects it; anywhere else clears the selection.
+          const hit = buildings.find((b) => b.polygon && insidePolygon(p, b.polygon));
+          setSelection(hit ? { type: 'building', id: hit.id } : null);
+        }}
       />
       <Panel expanded={expanded} onToggle={() => setExpanded((e) => !e)} scrollKey={selection} footer={<ActionBar />}>
         <PanelHeader updatedAt={zones?.updatedAt} demo={zones?.demo} actions={<UserMenu viewer={viewer} />} />
 
-        <Link
-          href="/navigate"
-          className="flex h-10 shrink-0 items-center gap-2 rounded-xl bg-fill px-3 text-[15px] text-secondary transition-colors hover:bg-fill-strong"
-        >
-          <SearchIcon size={16} />
-          ค้นหาปลายทางเพื่อนำทางหลบน้ำ
-        </Link>
+        <BuildingSearch buildings={buildings} onPick={pick} />
+        {building && <BuildingDetail building={building} onClose={close} />}
+        {cluster && <ZoneDetail cluster={cluster} rain={zones?.rain ?? null} onClose={close} />}
+        {report && <ReportDetail report={report} onClose={close} />}
+        {watchSpot && <WatchDetail watch={watchSpot} rain={zones?.rain ?? null} onClose={close} />}
+        <SavedPlaces
+          saved={saved}
+          onPick={(p) => {
+            const b = p.id && buildings.find((x) => x.id === p.id);
+            if (b) pick(b);
+            else router.push(navigateHref(p)); // a point picked on the map: go there
+          }}
+        />
 
+        <h2 className="-mb-1.5 px-1 pt-1 text-[13px] font-semibold text-secondary">น้ำท่วมและจราจร</h2>
         <div className="flex flex-col gap-2">
           <Segmented label="ประเภทรถ" options={VEHICLE_TABS} value={vehicle} onChange={setVehicle} />
           <RoadLegend />
@@ -78,10 +114,6 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
             โหลดข้อมูลไม่สำเร็จ ระบบจะลองใหม่อัตโนมัติ
           </p>
         )}
-        {cluster && <ZoneDetail cluster={cluster} rain={zones?.rain ?? null} onClose={close} />}
-        {report && <ReportDetail report={report} onClose={close} />}
-        {watchSpot && <WatchDetail watch={watchSpot} rain={zones?.rain ?? null} onClose={close} />}
-
         {zones ? (
           <>
             <RainCard rain={zones.rain} />

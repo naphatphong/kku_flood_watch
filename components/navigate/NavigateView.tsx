@@ -54,6 +54,14 @@ export function NavigateView({ demo }: { demo: boolean }) {
   const routes = result?.routes ?? [];
   const route = routes[selected];
 
+  // `/navigate?to=lng,lat&name=…` (building pages, saved places, the timetable) sets the destination.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const [lng, lat] = (q.get('to') ?? '').split(',').map(Number);
+    if (Number.isFinite(lng) && Number.isFinite(lat) && q.get('to'))
+      setTo({ kind: 'place', label: q.get('name') || 'ปลายทาง', position: [lng, lat] });
+  }, []);
+
   // "My location" as origin: one fix up front; the map's locate button keeps it fresh.
   const needFix = from?.kind === 'gps' && !gps && !!to;
   useEffect(() => {
@@ -213,7 +221,7 @@ export function NavigateView({ demo }: { demo: boolean }) {
       <Panel expanded={expanded} onToggle={() => setExpanded((e) => !e)} scrollKey={result} footer={footer}>
         <header className={`items-center gap-2 ${compact ? 'hidden md:flex' : 'flex'}`}>
           {back}
-          <h1 className="grow text-[19px] font-bold tracking-tight">นำทางหลบน้ำ</h1>
+          <h1 className="grow text-[19px] font-bold tracking-tight">นำทาง</h1>
         </header>
         {compact && (
           <div className="flex items-center gap-2 md:hidden">
@@ -282,7 +290,7 @@ export function NavigateView({ demo }: { demo: boolean }) {
         )}
         {picking && <Notice>แตะบนแผนที่เพื่อเลือก{picking === 'from' ? 'ต้นทาง' : 'ปลายทาง'}</Notice>}
         {demo && (
-          <Notice tone="warn">ระบบนำทางหลบน้ำจะใช้ได้เมื่อเชื่อมฐานข้อมูลแล้ว ระหว่างนี้เลือกปลายทางแล้วเปิด Google Maps ได้</Notice>
+          <Notice tone="warn">ระบบนำทางจะใช้ได้เมื่อเชื่อมฐานข้อมูลแล้ว ระหว่างนี้เลือกปลายทางแล้วเปิด Google Maps ได้</Notice>
         )}
         {gpsError && from?.kind === 'gps' && (
           <Notice tone="warn">หาตำแหน่งของคุณไม่ได้ เปิดสิทธิ์ตำแหน่ง (GPS) หรือเลือกต้นทางเอง</Notice>

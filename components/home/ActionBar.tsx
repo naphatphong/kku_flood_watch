@@ -6,7 +6,7 @@ export function ActionBar() {
     <div className="flex gap-2.5">
       <PillLink href="/navigate" variant="tinted" className="flex-auto whitespace-nowrap">
         <RouteIcon size={17} />
-        นำทางหลบน้ำ
+        นำทาง
       </PillLink>
       <PillLink href="/report" className="flex-auto whitespace-nowrap">
         <PlusIcon size={16} />

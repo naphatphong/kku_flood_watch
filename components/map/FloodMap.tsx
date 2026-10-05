@@ -6,15 +6,22 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection } from 'geojson';
 import { addRealism, ViewControl } from './realism';
 import { addIncidentIcons } from './incident-icons';
+import { addPlaceLayers, setPlaces, type Highlight } from './place-layer';
 import { addTraffic } from './traffic';
 import { useEffect, useMemo, useRef } from 'react';
 import { MAP, type Vehicle } from '@/lib/config';
-import { destination } from '@/lib/domain/geo';
+import { destination, type LngLat } from '@/lib/domain/geo';
 import type { ClusterDTO, ReportPin, WatchDTO } from '@/lib/data/types';
 import { CLICKABLE, clustersToGeoJSON, layers, reportsToGeoJSON, roadColor, watchToGeoJSON } from './layers';
 
-export type Selection = { type: 'cluster'; id: string } | { type: 'watch'; id: string } | { type: 'report'; id: number } | null;
+export type Selection =
+  | { type: 'cluster'; id: string }
+  | { type: 'watch'; id: string }
+  | { type: 'report'; id: number }
+  | { type: 'building'; id: string }
+  | null;
 const SOURCE = { cluster: 'clusters', watch: 'watch', report: 'reports' } as const;
+const featureOf = (s: Selection) => (s && s.type !== 'building' ? { source: SOURCE[s.type], id: s.id } : null);
 
 const isDesktop = () => window.matchMedia('(min-width: 768px)').matches;
 // Keep fitted content clear of the panel: sidebar on desktop, bottom sheet on mobile.
@@ -36,22 +43,26 @@ export default function FloodMap({
   reports,
   segments,
   vehicle,
+  highlights,
   selection,
   onSelect,
+  onMapClick,
 }: {
   clusters: ClusterDTO[];
   watch: WatchDTO[];
   reports: ReportPin[];
   segments: FeatureCollection | null;
   vehicle: Vehicle;
+  highlights: Highlight[]; // campus places to show in blue (selected building, today's classes)
   selection: Selection;
   onSelect: (s: Selection) => void;
+  onMapClick: (p: LngLat) => void; // a tap on nothing clickable (the page may find a building there)
 }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const ready = useRef(false);
-  const latest = useRef({ vehicle, onSelect });
-  latest.current = { vehicle, onSelect };
+  const latest = useRef({ vehicle, onSelect, onMapClick, highlights });
+  latest.current = { vehicle, onSelect, onMapClick, highlights };
 
   const clusterData = useMemo(() => clustersToGeoJSON(clusters), [clusters]);
   const reportData = useMemo(() => reportsToGeoJSON(reports), [reports]);
@@ -85,11 +96,12 @@ export default function FloodMap({
       m.addSource('segments', { type: 'geojson', data: data.current.segments ?? EMPTY });
       addIncidentIcons(m);
       layers(latest.current.vehicle).forEach((l) => m.addLayer(l));
+      addPlaceLayers(m, latest.current.highlights);
       ready.current = true;
 
       m.on('click', (e) => {
         const [hit] = m.queryRenderedFeatures(e.point, { layers: CLICKABLE });
-        if (!hit) return latest.current.onSelect(null);
+        if (!hit) return latest.current.onMapClick([e.lngLat.lng, e.lngLat.lat]);
         const id = hit.properties.id;
         latest.current.onSelect(
           hit.layer.id === 'clusters'
@@ -126,15 +138,26 @@ export default function FloodMap({
     if (ready.current) map.current?.setPaintProperty('roads', 'line-color', roadColor(vehicle));
   }, [vehicle]);
 
+  useEffect(() => {
+    if (ready.current && map.current) setPlaces(map.current, highlights);
+  }, [highlights]);
+
   // Highlight and frame the selection.
   const prev = useRef<Selection>(null);
   useEffect(() => {
     const m = map.current;
     if (!m || !ready.current) return;
-    if (prev.current) m.setFeatureState({ source: SOURCE[prev.current.type], id: prev.current.id }, { selected: false });
+    const before = featureOf(prev.current);
+    if (before) m.setFeatureState(before, { selected: false });
     prev.current = selection;
     if (!selection) return;
-    m.setFeatureState({ source: SOURCE[selection.type], id: selection.id }, { selected: true });
+    if (selection.type === 'building') {
+      // Show the building in 3D.
+      const h = latest.current.highlights.find((x) => x.key === selection.id);
+      if (h) m.flyTo({ center: h.center, zoom: 17.3, pitch: 55, bearing: -20, padding: panelPadding() });
+      return;
+    }
+    m.setFeatureState(featureOf(selection)!, { selected: true });
 
     const target =
       selection.type === 'report'

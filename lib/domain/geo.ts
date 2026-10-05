@@ -69,3 +69,14 @@ export function distanceToLineM(p: LngLat, line: LngLat[]): number {
   }
   return best;
 }
+
+/** True when a point lies inside a closed ring (ray casting; lng/lat treated as flat). */
+export function insidePolygon([x, y]: LngLat, ring: LngLat[]): boolean {
+  let hit = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
+  }
+  return hit;
+}

@@ -7,7 +7,7 @@ const thai = Noto_Sans_Thai({ subsets: ['thai', 'latin'], variable: '--font-thai
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
-  title: { default: `${SITE.name} · น้ำท่วมรอบ มข.`, template: `%s · ${SITE.name}` },
+  title: { default: `${SITE.name} · ${SITE.tagline}`, template: `%s · ${SITE.name}` },
   description: SITE.description,
   openGraph: { siteName: SITE.name, locale: 'th_TH', type: 'website' },
 };

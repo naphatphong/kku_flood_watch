@@ -39,7 +39,8 @@ export function addRealism(map: MapLibreMap) {
       minzoom: 14,
       filter: ['!=', ['get', 'hide_3d'], true],
       paint: {
-        'fill-extrusion-color': '#E4E1DA',
+        // Highlighted campus buildings (place-layer.ts) turn blue through feature state.
+        'fill-extrusion-color': ['case', ['boolean', ['feature-state', 'highlight'], false], '#0A84FF', '#E4E1DA'],
         'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 15, ['coalesce', ['get', 'render_height'], 6]],
         'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
         'fill-extrusion-opacity': 0.85,
