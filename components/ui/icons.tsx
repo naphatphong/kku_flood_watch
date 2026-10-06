@@ -22,6 +22,12 @@ function Svg({ size = 18, children, ...rest }: IconProps) {
   );
 }
 
+export const PhoneIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M5 4h3.5l1.5 4.5-2.2 1.4a11 11 0 006.3 6.3l1.4-2.2L20 15.5V19a1.5 1.5 0 01-1.6 1.5A16.5 16.5 0 013.5 5.6 1.5 1.5 0 015 4z" />
+  </Svg>
+);
+
 export const DropIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M12 3c3 4 6 7.5 6 11a6 6 0 01-12 0c0-3.5 3-7 6-11z" />
