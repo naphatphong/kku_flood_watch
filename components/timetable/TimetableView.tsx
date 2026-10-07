@@ -9,7 +9,7 @@ import { Panel } from '@/components/ui/Panel';
 import { PillButton } from '@/components/ui/Pill';
 import { Segmented } from '@/components/ui/Segmented';
 import { placeRef, type PlaceRef } from '@/lib/domain/user-data';
-import { insidePolygon, type LngLat } from '@/lib/domain/geo';
+import type { LngLat } from '@/lib/domain/geo';
 import { bangkokClock, classesOn, DAY_NAMES, DAY_SHORT, WEEK, type ClassEntry, type EntryInput } from '@/lib/domain/timetable';
 import { useBuildings } from '@/lib/hooks/useBuildings';
 import { useNow } from '@/lib/hooks/useNow';
@@ -54,9 +54,9 @@ export function TimetableView({ imageImport }: { imageImport: boolean }) {
     [importing, preview, list, buildings, editing],
   );
 
-  const onMapClick = (p: LngLat) => {
+  const onMapClick = (p: LngLat, id: string | null) => {
     if (!picking) return;
-    const b = buildings.find((x) => x.polygon && insidePolygon(p, x.polygon));
+    const b = id && buildings.find((x) => x.id === id);
     setMapPick(b ? placeRef(b) : { id: null, name: '', center: p });
   };
 

@@ -7,6 +7,7 @@ import type { FeatureCollection } from 'geojson';
 import { buildingHeightM, type Building } from '@/lib/domain/buildings';
 import type { LngLat } from '@/lib/domain/geo';
 import type { PlaceRef } from '@/lib/domain/user-data';
+import { addBuildingNames, baseBlocks, hideNames } from './building-names';
 
 export interface Highlight {
   key: string;
@@ -21,17 +22,14 @@ export interface Highlight {
 const COLOR = '#0A84FF';
 const BASE_MIN_ZOOM = 14; // buildings-3d in realism.ts
 
-/** The base map's building features for a highlight: "w123" → ids 1230–1232 (the last digit varies in OpenMapTiles). */
-const baseFeatures = (h: Highlight) =>
-  h.buildingId && /^w\d+$/.test(h.buildingId)
-    ? [0, 1, 2].map((k) => ({ source: 'openmaptiles', sourceLayer: 'building', id: Number(h.buildingId!.slice(1)) * 10 + k }))
-    : [];
+const baseFeatures = (h: Highlight) => baseBlocks(h.buildingId);
 // Per map: what is lit, and which of those the base map has no 3D block for (we draw those).
 const state = new WeakMap<MapLibreMap, { list: Highlight[]; own: Set<string> }>();
 
 function light(map: MapLibreMap, list: Highlight[]) {
   for (const f of (state.get(map)?.list ?? []).flatMap(baseFeatures)) map.setFeatureState(f, { highlight: false });
   for (const f of list.flatMap(baseFeatures)) map.setFeatureState(f, { highlight: true });
+  hideNames(map, list.flatMap((h) => h.buildingId ?? []));
   state.set(map, { list, own: state.get(map)?.own ?? new Set() });
 }
 
@@ -66,8 +64,9 @@ const toGeoJSON = (list: Highlight[], own = new Set<string>()): FeatureCollectio
   ]),
 });
 
-/** Adds the highlight layers on top. Call on the map's `load`, after the other layers. */
+/** Adds building names and the highlight layers on top. Call on the map's `load`, after the other layers. */
 export function addPlaceLayers(map: MapLibreMap, list: Highlight[]) {
+  addBuildingNames(map);
   map.addSource('places', { type: 'geojson', data: toGeoJSON(list) });
   const paint: FillExtrusionLayerSpecification['paint'] = { 'fill-extrusion-color': COLOR, 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.88 };
   map.addLayer({ id: 'places-3d', type: 'fill-extrusion', source: 'places', filter: ['==', ['geometry-type'], 'Polygon'], maxzoom: BASE_MIN_ZOOM, paint });
