@@ -3,23 +3,39 @@
 // ones included, so every building can be navigated to (the page decides what a tap does).
 // Buildings already highlighted (place-layer.ts) hide their grey name: the blue label shows instead.
 import type { GeoJSONSource, Map as MapLibreMap, PointLike } from 'maplibre-gl';
-import type { FeatureCollection, Position } from 'geojson';
-import { UNNAMED_BUILDING, type Building } from '@/lib/domain/buildings';
-import { insidePolygon, type LngLat } from '@/lib/domain/geo';
+import type { FeatureCollection, Geometry, Position } from 'geojson';
+import { buildingHeightM, UNNAMED_BUILDING, type Building } from '@/lib/domain/buildings';
+import { centroid, destination, distanceM, insidePolygon, type LngLat } from '@/lib/domain/geo';
 import { loadBuildings } from '@/lib/hooks/useBuildings';
 
-/**
- * The base map's 3D blocks of a building: "w123" → ids 1230–1232 (OpenMapTiles adds a digit to the
- * OSM id); "b4567" (an unnamed block tapped on the map) → exactly block 4567.
- */
-export const baseBlocks = (buildingId: string | null) => {
-  const block = (id: number) => ({ source: 'openmaptiles', sourceLayer: 'building', id });
-  if (buildingId && /^b\d+$/.test(buildingId)) return [block(Number(buildingId.slice(1)))];
-  return buildingId && /^w\d+$/.test(buildingId) ? [0, 1, 2].map((k) => block(Number(buildingId.slice(1)) * 10 + k)) : [];
+// The base map merges buildings of equal height into one tile feature (one id for up to hundreds of
+// buildings), so its feature state can only light the few buildings that have a feature of their own.
+// Everything else is lit by drawing our own blue block from the building's outline.
+
+/** The base map's 3D blocks of a named building: "w123" → ids 1230–1232 (OpenMapTiles adds a digit to the OSM id). */
+export const baseBlocks = (buildingId: string | null) =>
+  buildingId && /^w\d+$/.test(buildingId)
+    ? [0, 1, 2].map((k) => ({ source: 'openmaptiles', sourceLayer: 'building', id: Number(buildingId.slice(1)) * 10 + k }))
+    : [];
+
+/** A tile feature with more outlines than this is a merge of several buildings. */
+export const MAX_OWN_RINGS = 4;
+
+/** Outer rings of a (multi)polygon, each one building. */
+export const ringsOf = (g: Geometry): LngLat[][] =>
+  (g.type === 'Polygon' ? [g.coordinates[0]] : g.type === 'MultiPolygon' ? g.coordinates.map((p) => p[0]) : []).map(
+    (r: Position[]) => r.map(([x, y]) => [x, y] as LngLat),
+  );
+
+/** A ring scaled up 3% around its centre, so our blue block wraps the base map's grey one instead of flickering through it. */
+export const grow = (ring: LngLat[]): LngLat[] => {
+  const [cx, cy] = centroid(ring);
+  return ring.map(([x, y]) => [cx + (x - cx) * 1.03, cy + (y - cy) * 1.03]);
 };
 
 const lists = new WeakMap<MapLibreMap, Building[]>();
 const TEACHING = new Set<Building['kind']>(['building', 'faculty', 'library']);
+const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
 const toGeoJSON = (list: Building[]): FeatureCollection => ({
   type: 'FeatureCollection',
@@ -30,45 +46,78 @@ const toGeoJSON = (list: Building[]): FeatureCollection => ({
   })),
 });
 
-/**
- * The building at a screen point. Named buildings win, best match first: the 3D block drawn there
- * (what the eye sees in a tilted view), a named outline around that block (OSM relations and
- * building parts have other block ids), then a named outline under the point on the ground (as
- * before 3D picking). Only then does an unnamed block count, as an unnamed building from its tile shape.
- */
-export function buildingAt(map: MapLibreMap, point: PointLike, at: LngLat): Building | null {
-  const list = lists.get(map) ?? [];
-  const around = (p: LngLat) => list.find((b) => b.polygon && insidePolygon(p, b.polygon));
-  const [block] = map.getLayer('buildings-3d') ? map.queryRenderedFeatures(point, { layers: ['buildings-3d'] }) : [];
-  if (!block) return around(at) ?? null;
-  const g = block.geometry;
-  const ring = (g.type === 'Polygon' ? g.coordinates[0] : g.type === 'MultiPolygon' ? g.coordinates[0][0] : null) as
-    | Position[]
-    | null;
-  // ponytail: shape from the tile under the point, so a block cut by a tile edge gets a slightly off centre.
-  const pts = (ring ?? []).slice(0, -1).map(([x, y]) => [x, y] as LngLat);
-  const center: LngLat | null = pts.length
-    ? [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length]
-    : null;
-  const id = `w${Math.floor(Number(block.id) / 10)}`;
-  const named = list.find((b) => b.id === id) ?? (center && around(center)) ?? around(at);
-  if (named) return named;
-  if (!center) return null;
-  const height = Number(block.properties.render_height);
+const unnamed = (ring: LngLat[], height: number): Building => {
+  const [x, y] = centroid(ring).map((v) => Math.round(v * 1e6) / 1e6);
   return {
-    id: `b${block.id}`, // this block only (neighbours can share the OSM-derived id)
+    id: `u${x},${y}`, // its own id: the tile feature id is shared with other buildings
     name: UNNAMED_BUILDING,
     nameEn: null,
     code: null,
     kind: 'building',
-    levels: height > 0 ? Math.max(1, Math.round(height / 3.5)) : null,
-    center: [Math.round(center[0] * 1e6) / 1e6, Math.round(center[1] * 1e6) / 1e6],
-    polygon: pts,
+    levels: Math.max(1, Math.round(height / 3.5)),
+    center: [x, y],
+    polygon: ring,
   };
+};
+
+/**
+ * Of the buildings in one tile feature (all `height` tall), the one the eye sees at ground point `at`:
+ * walk from `at` back toward the camera; the view ray is `t / tan(pitch)` high after `t` metres, so
+ * the first outline met from the roof-height point inwards is the building the ray hits.
+ */
+function seenRing(map: MapLibreMap, rings: LngLat[][], at: LngLat, height: number): LngLat[] | null {
+  const near = rings.filter((r) => r.some((p) => distanceM(p, at) < 250));
+  const pitch = map.getPitch();
+  if (pitch < 5) return near.find((r) => insidePolygon(at, r)) ?? null;
+  const far = Math.min(height * Math.tan((pitch * Math.PI) / 180), 300);
+  const b = (map.getBearing() * Math.PI) / 180;
+  for (let i = Math.ceil(far); i >= 0; i--) {
+    const t = Math.min(i, far);
+    const p = destination(at, -t * Math.sin(b), -t * Math.cos(b));
+    const hit = near.find((r) => insidePolygon(p, r));
+    if (hit) return hit;
+  }
+  return null;
 }
+
+/**
+ * The building at a screen point and how tall to draw it. Without a 3D block there (low zoom or
+ * open ground), the named outline under the point. On a block: a named building whose own tile
+ * feature it is, else the one outline the eye sees in that feature, named when one of our outlines
+ * holds its centre, unnamed otherwise.
+ */
+function pick(map: MapLibreMap, point: PointLike, at: LngLat): { building: Building; heightM: number } | null {
+  const list = lists.get(map) ?? [];
+  const around = (p: LngLat) => list.find((b) => b.polygon && insidePolygon(p, b.polygon));
+  const ground = around(at);
+  const fallback = ground ? { building: ground, heightM: buildingHeightM(ground) } : null;
+  const [block] = map.getLayer('buildings-3d') ? map.queryRenderedFeatures(point, { layers: ['buildings-3d'] }) : [];
+  if (!block) return fallback;
+  const height = Number(block.properties.render_height) || 6;
+  const rings = ringsOf(block.geometry);
+  const own = rings.length <= MAX_OWN_RINGS && list.find((b) => b.id === `w${Math.floor(Number(block.id) / 10)}`);
+  if (own) return { building: own, heightM: Math.max(buildingHeightM(own), height) };
+  const ring = seenRing(map, rings, at, height);
+  if (!ring) return fallback;
+  const named = around(centroid(ring));
+  return named
+    ? { building: named, heightM: Math.max(buildingHeightM(named), height) }
+    : { building: unnamed(ring, height), heightM: height };
+}
+
+/** The building at a screen point (see `pick`), unnamed ones included. */
+export const buildingAt = (map: MapLibreMap, point: PointLike, at: LngLat): Building | null =>
+  pick(map, point, at)?.building ?? null;
 
 /** Adds the name layer and hover highlight. Call before the highlight layers so blue labels stay on top. */
 export function addBuildingNames(map: MapLibreMap) {
+  map.addSource('hover-3d', { type: 'geojson', data: EMPTY });
+  map.addLayer({
+    id: 'hover-3d',
+    type: 'fill-extrusion',
+    source: 'hover-3d',
+    paint: { 'fill-extrusion-color': '#0A84FF', 'fill-extrusion-height': ['get', 'height'], 'fill-extrusion-opacity': 0.88 },
+  });
   map.addSource('building-names', { type: 'geojson', data: toGeoJSON([]), promoteId: 'id' });
   map.addLayer({
     id: 'building-names',
@@ -98,17 +147,23 @@ export function addBuildingNames(map: MapLibreMap) {
   });
 
   let hovered: string | null = null;
-  const hover = (id: string | null, on: boolean) => {
-    if (!id) return;
-    map.setFeatureState({ source: 'building-names', id }, { hover: on });
-    for (const f of baseBlocks(id)) map.setFeatureState(f, { hover: on });
-  };
   map.on('mousemove', (e) => {
-    const id = buildingAt(map, e.point, [e.lngLat.lng, e.lngLat.lat])?.id ?? null;
+    const hit = pick(map, e.point, [e.lngLat.lng, e.lngLat.lat]);
+    const id = hit?.building.id ?? null;
     if (id === hovered) return;
-    hover(hovered, false);
-    hover(id, true);
+    if (hovered) map.setFeatureState({ source: 'building-names', id: hovered }, { hover: false });
+    if (id) map.setFeatureState({ source: 'building-names', id }, { hover: true });
     hovered = id;
+    const ring = hit?.building.polygon;
+    (map.getSource('hover-3d') as GeoJSONSource).setData(
+      ring
+        ? {
+            type: 'Feature',
+            properties: { height: hit.heightM + 0.5 },
+            geometry: { type: 'Polygon', coordinates: [grow(ring)] },
+          }
+        : EMPTY,
+    );
     map.getCanvas().style.cursor = id ? 'pointer' : '';
   });
 }

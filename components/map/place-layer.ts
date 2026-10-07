@@ -1,13 +1,13 @@
 // Highlighted campus places: the selected building, today's classes, saved places.
-// From zoom 14 the map's own 3D building turns blue (feature state; OpenMapTiles ids are the
-// OSM way id × 10 plus a digit). Below that, or when the base map lacks the block, our outline is
-// drawn instead. Places without an outline get a pin.
+// From zoom 14 the map's own 3D building turns blue when it has a tile feature of its own (feature
+// state; OpenMapTiles ids are the OSM way id × 10 plus a digit). Below that, or when the base map
+// lacks the block or merged it with others, our outline is drawn instead. Places without an outline get a pin.
 import type { FillExtrusionLayerSpecification, GeoJSONSource, Map as MapLibreMap } from 'maplibre-gl';
 import type { FeatureCollection } from 'geojson';
 import { buildingHeightM, type Building } from '@/lib/domain/buildings';
-import type { LngLat } from '@/lib/domain/geo';
+import { insidePolygon, type LngLat } from '@/lib/domain/geo';
 import type { PlaceRef } from '@/lib/domain/user-data';
-import { addBuildingNames, baseBlocks, hideNames } from './building-names';
+import { addBuildingNames, baseBlocks, grow, hideNames, MAX_OWN_RINGS, ringsOf } from './building-names';
 
 export interface Highlight {
   key: string;
@@ -23,36 +23,49 @@ const COLOR = '#0A84FF';
 const BASE_MIN_ZOOM = 14; // buildings-3d in realism.ts
 
 const baseFeatures = (h: Highlight) => baseBlocks(h.buildingId);
-// Per map: what is lit, and which of those the base map has no 3D block for (we draw those).
-const state = new WeakMap<MapLibreMap, { list: Highlight[]; own: Set<string> }>();
+// Per map: what is lit, and the ones we draw ourselves (no base block of their own) with their height.
+const state = new WeakMap<MapLibreMap, { list: Highlight[]; own: Map<string, number> }>();
 
 function light(map: MapLibreMap, list: Highlight[]) {
   for (const f of (state.get(map)?.list ?? []).flatMap(baseFeatures)) map.setFeatureState(f, { highlight: false });
   for (const f of list.flatMap(baseFeatures)) map.setFeatureState(f, { highlight: true });
   hideNames(map, list.flatMap((h) => h.buildingId ?? []));
-  state.set(map, { list, own: state.get(map)?.own ?? new Set() });
+  state.set(map, { list, own: state.get(map)?.own ?? new Map() });
 }
 
-/** After tiles load: outlines whose base block isn't in the tiles get our own blue block at every zoom. */
+/**
+ * After tiles load: outlines without a base block of their own (missing, or merged with other
+ * buildings) get our own blue block at every zoom, as tall as the grey one under it so none shows.
+ */
 function checkBase(map: MapLibreMap) {
   const s = state.get(map);
   if (!s || map.getZoom() < BASE_MIN_ZOOM) return;
-  const ids = new Set(map.querySourceFeatures('openmaptiles', { sourceLayer: 'building' }).map((f) => f.id));
-  const own = new Set(s.list.filter((h) => h.polygon && !baseFeatures(h).some((f) => ids.has(f.id))).map((h) => h.key));
+  const feats = map.querySourceFeatures('openmaptiles', { sourceLayer: 'building' });
+  const single = new Set(feats.filter((f) => ringsOf(f.geometry).length <= MAX_OWN_RINGS).map((f) => f.id));
+  const own = new Map(
+    s.list
+      .filter((h) => h.polygon && !baseFeatures(h).some((f) => single.has(f.id)))
+      .map((h) => {
+        const under = feats.find((f) => ringsOf(f.geometry).some((r) => insidePolygon(h.center, r)));
+        return [h.key, Math.max(h.heightM, Number(under?.properties.render_height) || 0) + 0.5] as const;
+      }),
+  );
+  // A merged base block would light up every building in it: only blocks of their own stay lit.
+  for (const h of s.list) for (const f of baseFeatures(h)) map.setFeatureState(f, { highlight: !own.has(h.key) });
   if ([...own].join() === [...s.own].join()) return;
   state.set(map, { ...s, own });
   (map.getSource('places') as GeoJSONSource).setData(toGeoJSON(s.list, own));
 }
 
-const toGeoJSON = (list: Highlight[], own = new Set<string>()): FeatureCollection => ({
+const toGeoJSON = (list: Highlight[], own = new Map<string, number>()): FeatureCollection => ({
   type: 'FeatureCollection',
   features: list.flatMap((h) => [
     ...(h.polygon
       ? [
           {
             type: 'Feature' as const,
-            properties: { height: h.heightM, own: own.has(h.key) },
-            geometry: { type: 'Polygon' as const, coordinates: [h.polygon] },
+            properties: { height: own.get(h.key) ?? h.heightM, own: own.has(h.key) },
+            geometry: { type: 'Polygon' as const, coordinates: [own.has(h.key) ? grow(h.polygon) : h.polygon] },
           },
         ]
       : []),
