@@ -53,6 +53,9 @@ export function searchBuildings(list: Building[], query: string, limit = 8): Bui
 /** 3D highlight height: levels × 3.5 m, or a typical 3-storey block. */
 export const buildingHeightM = (b: Pick<Building, 'levels'>) => (b.levels ?? 3) * 3.5;
 
+/** Name for a 3D building the map draws but our list has no name for (tapped on the map). */
+export const UNNAMED_BUILDING = 'อาคารไม่มีชื่อ';
+
 export const KIND_LABELS: Record<Building['kind'], string> = {
   building: 'อาคาร',
   faculty: 'คณะ/หน่วยงาน',

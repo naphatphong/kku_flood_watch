@@ -1,17 +1,22 @@
 // Every named campus building's name, small and grey from zoom 15 (owner request, 7 Oct 2026).
-// The building under the mouse turns blue with its name; a tap selects it (the page decides).
+// Any building under the mouse turns blue (with its name); a tap on any building selects it, unnamed
+// ones included, so every building can be navigated to (the page decides what a tap does).
 // Buildings already highlighted (place-layer.ts) hide their grey name: the blue label shows instead.
 import type { GeoJSONSource, Map as MapLibreMap, PointLike } from 'maplibre-gl';
-import type { FeatureCollection } from 'geojson';
-import type { Building } from '@/lib/domain/buildings';
+import type { FeatureCollection, Position } from 'geojson';
+import { UNNAMED_BUILDING, type Building } from '@/lib/domain/buildings';
 import { insidePolygon, type LngLat } from '@/lib/domain/geo';
 import { loadBuildings } from '@/lib/hooks/useBuildings';
 
-/** The base map's 3D blocks of a building: "w123" → ids 1230–1232 (OpenMapTiles adds a digit to the OSM id). */
-export const baseBlocks = (buildingId: string | null) =>
-  buildingId && /^w\d+$/.test(buildingId)
-    ? [0, 1, 2].map((k) => ({ source: 'openmaptiles', sourceLayer: 'building', id: Number(buildingId.slice(1)) * 10 + k }))
-    : [];
+/**
+ * The base map's 3D blocks of a building: "w123" → ids 1230–1232 (OpenMapTiles adds a digit to the
+ * OSM id); "b4567" (an unnamed block tapped on the map) → exactly block 4567.
+ */
+export const baseBlocks = (buildingId: string | null) => {
+  const block = (id: number) => ({ source: 'openmaptiles', sourceLayer: 'building', id });
+  if (buildingId && /^b\d+$/.test(buildingId)) return [block(Number(buildingId.slice(1)))];
+  return buildingId && /^w\d+$/.test(buildingId) ? [0, 1, 2].map((k) => block(Number(buildingId.slice(1)) * 10 + k)) : [];
+};
 
 const lists = new WeakMap<MapLibreMap, Building[]>();
 const TEACHING = new Set<Building['kind']>(['building', 'faculty', 'library']);
@@ -26,14 +31,40 @@ const toGeoJSON = (list: Building[]): FeatureCollection => ({
 });
 
 /**
- * The named building at a screen point: the 3D block drawn there (what the eye sees in a tilted
- * view), else the outline under the point on the ground. Null for unnamed buildings.
+ * The building at a screen point. Named buildings win, best match first: the 3D block drawn there
+ * (what the eye sees in a tilted view), a named outline around that block (OSM relations and
+ * building parts have other block ids), then a named outline under the point on the ground (as
+ * before 3D picking). Only then does an unnamed block count, as an unnamed building from its tile shape.
  */
 export function buildingAt(map: MapLibreMap, point: PointLike, at: LngLat): Building | null {
   const list = lists.get(map) ?? [];
+  const around = (p: LngLat) => list.find((b) => b.polygon && insidePolygon(p, b.polygon));
   const [block] = map.getLayer('buildings-3d') ? map.queryRenderedFeatures(point, { layers: ['buildings-3d'] }) : [];
-  if (block) return list.find((b) => b.id === `w${Math.floor(Number(block.id) / 10)}`) ?? null;
-  return list.find((b) => b.polygon && insidePolygon(at, b.polygon)) ?? null;
+  if (!block) return around(at) ?? null;
+  const g = block.geometry;
+  const ring = (g.type === 'Polygon' ? g.coordinates[0] : g.type === 'MultiPolygon' ? g.coordinates[0][0] : null) as
+    | Position[]
+    | null;
+  // ponytail: shape from the tile under the point, so a block cut by a tile edge gets a slightly off centre.
+  const pts = (ring ?? []).slice(0, -1).map(([x, y]) => [x, y] as LngLat);
+  const center: LngLat | null = pts.length
+    ? [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length]
+    : null;
+  const id = `w${Math.floor(Number(block.id) / 10)}`;
+  const named = list.find((b) => b.id === id) ?? (center && around(center)) ?? around(at);
+  if (named) return named;
+  if (!center) return null;
+  const height = Number(block.properties.render_height);
+  return {
+    id: `b${block.id}`, // this block only (neighbours can share the OSM-derived id)
+    name: UNNAMED_BUILDING,
+    nameEn: null,
+    code: null,
+    kind: 'building',
+    levels: height > 0 ? Math.max(1, Math.round(height / 3.5)) : null,
+    center: [Math.round(center[0] * 1e6) / 1e6, Math.round(center[1] * 1e6) / 1e6],
+    polygon: pts,
+  };
 }
 
 /** Adds the name layer and hover highlight. Call before the highlight layers so blue labels stay on top. */
