@@ -6,6 +6,7 @@ import { useEffect, useRef } from 'react';
 import { MAP } from '@/lib/config';
 import type { LngLat } from '@/lib/domain/geo';
 import { createMap, isDesktop, panelPadding } from './create-map';
+import { buildingAt } from './building-names';
 import { addPlaceLayers, setPlaces, type Highlight } from './place-layer';
 import { addRealism, ViewControl } from './realism';
 
@@ -17,7 +18,7 @@ export default function CampusMap({
 }: {
   highlights: Highlight[];
   fitKey: unknown; // refit when this changes (another day) or the number of places does
-  onMapClick?: (p: LngLat) => void;
+  onMapClick?: (p: LngLat, buildingId: string | null) => void; // with the named building seen there
 }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -43,7 +44,10 @@ export default function CampusMap({
         fit(m, latest.current.highlights);
       }
     });
-    m.on('click', (e) => latest.current.onMapClick?.([e.lngLat.lng, e.lngLat.lat]));
+    m.on('click', (e) => {
+      const at: LngLat = [e.lngLat.lng, e.lngLat.lat];
+      latest.current.onMapClick?.(at, buildingAt(m, e.point, at)?.id ?? null);
+    });
     map.current = m;
     return () => {
       ready.current = false;

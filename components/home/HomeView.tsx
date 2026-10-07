@@ -11,7 +11,6 @@ import { Segmented } from '@/components/ui/Segmented';
 import type { Viewer } from '@/lib/auth';
 import { DEFAULT_VEHICLE, VEHICLES, type Vehicle } from '@/lib/config';
 import { navigateHref, type Building } from '@/lib/domain/buildings';
-import { insidePolygon } from '@/lib/domain/geo';
 import { bangkokClock, classesOn } from '@/lib/domain/timetable';
 import { useBuildings } from '@/lib/hooks/useBuildings';
 import { useMapData } from '@/lib/hooks/useMapData';
@@ -73,11 +72,8 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
         highlights={highlights}
         selection={selection}
         onSelect={setSelection}
-        onMapClick={(p) => {
-          // A tap on a named building selects it; anywhere else clears the selection.
-          const hit = buildings.find((b) => b.polygon && insidePolygon(p, b.polygon));
-          setSelection(hit ? { type: 'building', id: hit.id } : null);
-        }}
+        // A tap on a named building selects it; anywhere else clears the selection.
+        onMapClick={(_, id) => setSelection(id ? { type: 'building', id } : null)}
       />
       <Panel expanded={expanded} onToggle={() => setExpanded((e) => !e)} scrollKey={selection} footer={<ActionBar />}>
         <PanelHeader updatedAt={zones?.updatedAt} demo={zones?.demo} actions={<UserMenu viewer={viewer} />} />
