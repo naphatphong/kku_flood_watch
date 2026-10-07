@@ -43,6 +43,7 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
   const router = useRouter();
   const [vehicle, setVehicle] = useState<Vehicle>(DEFAULT_VEHICLE);
   const [selection, setSelection] = useState<Selection>(null);
+  const [tapped, setTapped] = useState<Building | null>(null); // a building tapped on the map, maybe unnamed
   const [expanded, setExpanded] = useState(false);
 
   const clusters = zones?.clusters ?? [];
@@ -51,7 +52,10 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
   const cluster = selection?.type === 'cluster' ? clusters.find((c) => c.id === selection.id) : undefined;
   const report = selection?.type === 'report' ? pins.find((r) => r.id === selection.id) : undefined;
   const watchSpot = selection?.type === 'watch' ? watch.find((w) => w.id === selection.id) : undefined;
-  const building = selection?.type === 'building' ? buildings.find((b) => b.id === selection.id) : undefined;
+  const building =
+    selection?.type === 'building'
+      ? (buildings.find((b) => b.id === selection.id) ?? (tapped?.id === selection.id ? tapped : undefined))
+      : undefined;
   const today = useMemo(() => classesOn(classes, bangkokClock(now).day), [classes, now]);
   // The selected building, or else today's classes numbered in order.
   const highlights = useMemo(
@@ -72,8 +76,11 @@ export function HomeView({ viewer, warning }: { viewer: Viewer | null; warning: 
         highlights={highlights}
         selection={selection}
         onSelect={setSelection}
-        // A tap on a named building selects it; anywhere else clears the selection.
-        onMapClick={(_, id) => setSelection(id ? { type: 'building', id } : null)}
+        // A tap on any building selects it; anywhere else clears the selection.
+        onMapClick={(_, b) => {
+          setTapped(b);
+          setSelection(b ? { type: 'building', id: b.id } : null);
+        }}
       />
       <Panel expanded={expanded} onToggle={() => setExpanded((e) => !e)} scrollKey={selection} footer={<ActionBar />}>
         <PanelHeader updatedAt={zones?.updatedAt} demo={zones?.demo} actions={<UserMenu viewer={viewer} />} />

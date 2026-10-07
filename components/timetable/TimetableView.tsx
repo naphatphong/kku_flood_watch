@@ -9,6 +9,7 @@ import { Panel } from '@/components/ui/Panel';
 import { PillButton } from '@/components/ui/Pill';
 import { Segmented } from '@/components/ui/Segmented';
 import { placeRef, type PlaceRef } from '@/lib/domain/user-data';
+import type { Building } from '@/lib/domain/buildings';
 import type { LngLat } from '@/lib/domain/geo';
 import { bangkokClock, classesOn, DAY_NAMES, DAY_SHORT, WEEK, type ClassEntry, type EntryInput } from '@/lib/domain/timetable';
 import { useBuildings } from '@/lib/hooks/useBuildings';
@@ -54,10 +55,10 @@ export function TimetableView({ imageImport }: { imageImport: boolean }) {
     [importing, preview, list, buildings, editing],
   );
 
-  const onMapClick = (p: LngLat, id: string | null) => {
+  const onMapClick = (p: LngLat, tapped: Building | null) => {
     if (!picking) return;
-    const b = id && buildings.find((x) => x.id === id);
-    setMapPick(b ? placeRef(b) : { id: null, name: '', center: p });
+    const b = tapped && buildings.find((x) => x.id === tapped.id);
+    setMapPick(b ? placeRef(b) : { id: null, name: '', center: tapped?.center ?? p }); // unnamed: the visitor names it
   };
 
   return (

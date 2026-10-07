@@ -6,6 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection } from 'geojson';
 import { addRealism, ViewControl } from './realism';
 import { addIncidentIcons } from './incident-icons';
+import type { Building } from '@/lib/domain/buildings';
 import { buildingAt } from './building-names';
 import { addPlaceLayers, setPlaces, type Highlight } from './place-layer';
 import { addTraffic } from './traffic';
@@ -51,7 +52,7 @@ export default function FloodMap({
   highlights: Highlight[]; // campus places to show in blue (selected building, today's classes)
   selection: Selection;
   onSelect: (s: Selection) => void;
-  onMapClick: (p: LngLat, buildingId: string | null) => void; // a tap on nothing clickable, with the named building there
+  onMapClick: (p: LngLat, building: Building | null) => void; // a tap on nothing clickable, with the building there
 }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -97,7 +98,7 @@ export default function FloodMap({
       m.on('click', (e) => {
         const [hit] = m.queryRenderedFeatures(e.point, { layers: CLICKABLE });
         const at: LngLat = [e.lngLat.lng, e.lngLat.lat];
-        if (!hit) return latest.current.onMapClick(at, buildingAt(m, e.point, at)?.id ?? null);
+        if (!hit) return latest.current.onMapClick(at, buildingAt(m, e.point, at));
         const id = hit.properties.id;
         latest.current.onSelect(
           hit.layer.id === 'clusters'
