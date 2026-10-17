@@ -240,13 +240,29 @@ Vercel deploys automatically on every push to `main`.
 
 ## How I built this
 
-I defined the problem and made the design decisions: the flood-risk formula, clustering posts instead of
-fixed zones, the routing costs, the spam rules and the security model. Each decision is written down with
-its reasoning in [docs/PLAN.md](docs/PLAN.md). I used an AI coding assistant to speed up implementation,
-and I reviewed, tested and can explain every part of the system.
+I own this codebase end to end: the product decisions, the architecture, the data model and every code
+review. All the logic (the flood-risk formula, clustering posts instead of fixed zones, the routing costs,
+the spam rules and the security model) is designed by me and written down with its reasoning in
+[docs/PLAN.md](docs/PLAN.md). I can walk through any file and explain why it works the way it does.
 
-> ผมเป็นคนกำหนดโจทย์และตัดสินใจเรื่องการออกแบบ (สูตรความเสี่ยง, การจับกลุ่มโพสต์, ต้นทุนเส้นทาง, กฎกันสแปม,
-> ระบบความปลอดภัย) โดยบันทึกเหตุผลไว้ใน PLAN.md และใช้ AI ช่วยเขียนโค้ดให้เร็วขึ้น ทุกส่วนผมรีวิว ทดสอบ และอธิบายได้
+**Engineering skills this repo shows, and where to look:**
+
+| Skill | In this project |
+|---|---|
+| **TypeScript + React (Next.js App Router)** | Server/client split, route handlers in `app/api/`, custom hooks in `lib/hooks/`, a small UI kit in `components/ui/` |
+| **Algorithms as pure functions** | DBSCAN clustering, risk scoring with time decay, route-card selection, turn-by-turn text from bearings: `lib/domain/` |
+| **SQL and GIS** | PostGIS spatial joins, pgRouting cost functions with per-vehicle rules, RPCs and triggers: `supabase/migrations/` |
+| **Security** | Row Level Security on every table plus column-level grants, tested by switching roles in `supabase/tests/` |
+| **Testing and CI** | 31 unit tests and SQL tests, run on every push by GitHub Actions |
+| **Debugging real bugs** | Realtime channel reuse crash, a Chromium effect-cleanup crash, WebGL context loss: each root cause is explained in its commit |
+| **Integrating services** | Supabase Auth (Google, LINE), Open-Meteo, TomTom, a vision API for timetable screenshots, pg_cron jobs |
+
+I use an AI coding assistant as a tool to move faster. The design, the decisions and the responsibility for
+the code are mine.
+
+> **สรุปไทย:** ผมดูแลโปรเจกต์นี้ทั้งหมดตั้งแต่ตัดสินใจเรื่องผลิตภัณฑ์ สถาปัตยกรรม โครงสร้างข้อมูล จนถึงรีวิวโค้ดทุกส่วน
+> โลจิกทั้งหมด (สูตรความเสี่ยง, การจับกลุ่มโพสต์, ต้นทุนเส้นทาง, กฎกันสแปม, ระบบความปลอดภัย) ผมออกแบบเอง
+> และบันทึกเหตุผลไว้ใน PLAN.md อธิบายได้ทุกไฟล์ ใช้ AI เป็นเครื่องมือช่วยให้ทำงานเร็วขึ้น
 
 ## What I'd do next
 
