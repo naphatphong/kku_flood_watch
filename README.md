@@ -1,4 +1,4 @@
-# KKU Campus: flood map, flood-avoiding navigation and a campus companion
+# KKU Campus: find buildings, plan your classes and get around Khon Kaen University
 
 [![CI](https://github.com/naphatphong/kku_flood_watch/actions/workflows/ci.yml/badge.svg)](https://github.com/naphatphong/kku_flood_watch/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
@@ -6,73 +6,88 @@
 
 **Live:** https://kku-flood-watch.vercel.app
 
-> เว็บแอปสำหรับนักศึกษา มข. ที่รวมแผนที่น้ำท่วมจากรายงานของชุมชน
-> นำทางเลี่ยงถนนที่น้ำท่วมและรถติด ค้นหาตึกแบบ 3 มิติ ตารางเรียน และพยากรณ์อากาศ
-> จุดเด่นคือสูตรประเมินความเสี่ยงที่อธิบายได้ (ฝน + ความต่ำของพื้นที่ + รายงานจากผู้ใช้),
-> ระบบหาเส้นทางที่คำนวณในฐานข้อมูลด้วย pgRouting และความปลอดภัยระดับแถวข้อมูล (RLS) ที่มีเทสต์รองรับ
+> **สรุปภาษาไทย:** เว็บแอปสำหรับนักศึกษา มข. รวมทุกอย่างที่ใช้ในมหาวิทยาลัยไว้ที่เดียว
+> ค้นหาตึกเรียนแบบ 3 มิติ (พิมพ์ SC9 หรือ "วิศวะ" ก็เจอ), ใส่ตารางเรียนแล้วดูตึกที่ต้องไปในแต่ละวันบนแผนที่
+> (นำเข้าจากระบบทะเบียนได้), นำทางด้วยรถหรือเดินเท้าโดยเลี่ยงรถติดและถนนน้ำท่วม,
+> ดูแผนที่น้ำท่วมจากรายงานของชุมชน, พยากรณ์อากาศ 10 วัน และปุ่ม SOS เบอร์ฉุกเฉิน
 
-Khon Kaen University floods during the rainy season, and students find out which roads are under water
-by getting their feet wet. KKU Campus is a **full-stack, crowd-sourced flood map with routing that avoids
-flooded roads**. It grew into a campus companion: 3D building search, a class timetable, traffic and weather.
+KKU Campus is a **campus companion for students**: look up any building, put your class timetable on the
+map, get walking or driving directions that avoid traffic and flooded roads, and see what the weather and
+roads are doing before you leave. It is a full-stack web app with a real database, logins, an admin panel
+and scheduled jobs, deployed on Vercel.
 
 `Next.js 16` · `TypeScript` · `Supabase (Postgres + PostGIS + pgRouting + RLS + Realtime + pg_cron)` ·
 `MapLibre GL` · `Claude API (vision)` · `Open-Meteo` · `TomTom` · `Vercel`
 
-| Flood and traffic map (live) | Flood-avoiding navigation |
-|---|---|
-| ![Home: flood map with live traffic](docs/screenshots/home.webp) | ![Navigation with route card and turn list](docs/screenshots/navigate.webp) |
-| **Building search with 3D highlight** | **Why a circle shows 52%** (demo mode, sample data) |
-| ![Campus building SC09 highlighted in 3D](docs/screenshots/campus.webp) | ![Risk circle detail: report, base, confidence and the formula](docs/screenshots/flood.webp) |
+## What you can do
 
-<p align="center"><img src="docs/screenshots/mobile.webp" alt="Mobile layout with bottom sheet" width="240"><br><sub>Mobile layout</sub></p>
+| Find a building | Plan your classes |
+|---|---|
+| ![Search SC09: the building is highlighted in 3D with navigate and save buttons](docs/screenshots/campus.webp) | ![Timetable: Monday's two classes numbered on the map](docs/screenshots/timetable.webp) |
+| Search in Thai, English or by code (`SC9` = `SC09`, "วิศวะ" finds "วิศวกรรม"). The building lights up in 3D, with navigate, save and add-to-timetable | Add classes by hand or import them from the registrar. Each day's buildings are numbered on the map, with a "next class" card and a navigate button |
+
+| Get there | Know the conditions |
+|---|---|
+| ![Navigation: route card with travel time, traffic delay and turn list](docs/screenshots/navigate.webp) | ![Flood and live traffic map of the campus area](docs/screenshots/home.webp) |
+| Drive, ride or walk. Walking uses the campus footpaths. Routes avoid roads reported flooded and show live traffic delay | Flood circles from community reports, live traffic, 10-day weather and an SOS button with campus and national emergency numbers |
+
+<p align="center"><img src="docs/screenshots/mobile.webp" alt="Mobile layout with bottom sheet" width="240"><br><sub>Phone layout: the same app as a bottom sheet over the map</sub></p>
 
 ### Start here
 
 | If you have… | Read |
 |---|---|
-| 2 minutes | [Highlights](#highlights) and the screenshots above |
-| 10 minutes | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): the formula, routing, security model and diagrams |
+| 2 minutes | The screenshots above and [Highlights](#highlights) |
+| 10 minutes | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the campus features and the flood-risk formula work, with diagrams |
 | More | [docs/PLAN.md](docs/PLAN.md) (every decision and why), then `lib/domain/` (the rules, with tests) |
 
 ---
+
+## Features
+
+**Campus**
+- 184 named buildings and places from OpenStreetMap, with codes normalised (`SC. 09` → `SC09`) and extra nicknames in one file
+- Search, then a 3D highlight of the exact building; names appear from zoom 15 and the one under the mouse turns blue; tapping picks the block under your finger, even on a tilted map
+- Saved places, kept on your device and synced to your account when you sign in
+
+**Classes**
+- Timetable by day: add, edit and delete classes, pick the building by search or by tapping the map
+- Import from the registrar (reg.kku.ac.th) by pasting the copied table, or by uploading a screenshot that a vision model reads; every row is reviewed before it is saved
+- Building codes the app doesn't know are placed once by a signed-in user and shared with everyone
+
+**Getting around**
+- Routes for motorbike, car, pickup and walking: safest, balanced, avoid-traffic and shortest cards, with Thai turn-by-turn directions
+- Live traffic delay per route, warnings for incidents on the way, a prompt to reroute when a road ahead becomes blocked, and a Google Maps hand-off outside the area
+- Drag the route on the map to add via points
+
+**Safety and conditions**
+- Flood map built from community posts (area or road), with photos, votes, spam checks and an admin review queue
+- Road incident reports (accident, closure, road works) that expire after a short time
+- Watch circles on low ground when rain is forecast, even before anyone posts
+- iOS-style hourly and 10-day forecast with warnings; SOS button with campus security, the hospital and national hotlines
 
 ## Highlights
 
 | | |
 |---|---|
-| **Flood risk you can explain** | A rule-based score that combines live rain, low-lying ground and community posts. Every circle shows *why* it got its % |
-| **Routing that avoids floods** | pgRouting inside Postgres; each road's cost depends on the vehicle (motorbike, car, pickup, walking) and the road's flood status. Shows up to 4 route cards: safest, balanced, avoid traffic, shortest |
-| **Security in the database** | Row Level Security on every table, and SQL tests that log in as anon, user and admin to check it |
-| **Spam defence** | An explainable spam score (account age, GPS distance, rain plausibility, links, history), rate limits, and photos stripped of EXIF/GPS |
-| **Logic I can test** | Every formula is a pure function in `lib/domain/` with no DB access; **31 unit tests**, all passing |
-| **AI where it helps** | Claude reads a screenshot of your registrar timetable and returns structured classes (JSON schema) |
-| **Realtime + scheduled jobs** | Supabase Realtime pushes changes to open maps; pg_cron refreshes rain, clusters and traffic every 15 min |
-
----
-
-
-## Features
-
-- **Flood map:** clusters coloured by risk, road colours per vehicle (green / yellow / red / grey), posts with photos and votes
-- **Navigate:** safest / balanced / avoid-traffic / shortest, Thai turn-by-turn list, warnings for incidents on the route, warning when a road ahead turns blocked, hand-off to Google Maps outside the area
-- **Report:** area (pin + radius) or road (tap segments), water level and passability per vehicle; road incidents (accident, closure, road works) with a shorter expiry
-- **Campus:** 3D building search (Thai, English, codes), saved places, class timetable with "next class", import from the registrar by paste (HTML colspan parsing) or screenshot (Claude vision)
-- **Weather:** iOS-style hourly + 10-day forecast with alerts
-- **Admin:** moderation queue, ban users, admin log
-- **SOS button** with campus and national emergency numbers
+| **Search that understands how people type** | Normalises Thai/English, codes with or without zeros and common nicknames: `lib/domain/buildings.ts` |
+| **Timetable logic you can test** | Bangkok-time clock, "next class" across days, validation, registrar table parsing from HTML `colspan`: `lib/domain/timetable.ts`, `reg-import.ts` |
+| **Routing inside the database** | pgRouting costs per vehicle and per road status, walking over footpaths, traffic-aware time: `supabase/migrations/` |
+| **Flood risk you can explain** | A rule-based score from live rain, low ground and community posts; each circle shows why it got its percentage |
+| **Security in the database** | Row Level Security on every table and SQL tests that log in as anon, user and admin |
+| **Pure logic, tested, in CI** | Rules are pure functions with 31 unit tests plus SQL tests, run on every push |
 
 ## Project structure
 
 | Folder | What it does |
 |---|---|
-| `lib/domain/` | Pure rules (no DB): rain, clustering, flood %, road colours, spam, route picking, turn list + `domain.test.ts` |
+| `lib/domain/` | Pure rules (no DB): building search, timetable, registrar import, rain, clustering, flood %, road colours, spam, route picking, turn list + `domain.test.ts` |
 | `lib/data/` | Reads and writes data (Supabase, Open-Meteo, TomTom, Claude), plus demo mode |
 | `lib/supabase/` | Supabase clients (user, anon, service role) |
-| `app/` | Pages (`/`, `/navigate`, `/report`, `/post/[id]`, `/me`, `/admin`, `/timetable`, `/weather`, `/about`, `/login`) and API (`app/api/`) |
-| `components/` | UI by page (`home`, `navigate`, `report`, `post`, `admin`, `timetable`) + shared (`ui`, `map`) |
+| `app/` | Pages (`/`, `/navigate`, `/timetable`, `/report`, `/weather`, `/post/[id]`, `/me`, `/admin`, `/about`, `/login`) and API (`app/api/`) |
+| `components/` | UI by page (`home`, `navigate`, `timetable`, `report`, `post`, `admin`) + shared (`ui`, `map`) |
 | `supabase/migrations/` | Schema, RLS, SQL functions (pgRouting), Realtime, pg_cron |
 | `supabase/tests/` | SQL tests for RLS, triggers and RPCs |
-| `supabase/seed/roads.sql` | OSM roads around KKU (built with `scripts/import-roads.ts`) |
 | `scripts/` | One-off data prep: OSM roads, footpaths, buildings, elevation terciles |
 
 ## Run it locally
@@ -97,7 +112,7 @@ Vercel deploys automatically on every push to `main`.
 ## How I built this
 
 I own this codebase end to end: the product decisions, the architecture, the data model and every code
-review. All the logic (the flood-risk formula, clustering posts instead of fixed zones, the routing costs,
+review. All the logic (building search, the timetable rules, the routing costs, the flood-risk formula,
 the spam rules and the security model) is designed by me and written down with its reasoning in
 [docs/PLAN.md](docs/PLAN.md). I can walk through any file and explain why it works the way it does.
 
@@ -106,27 +121,28 @@ the spam rules and the security model) is designed by me and written down with i
 | Skill | In this project |
 |---|---|
 | **TypeScript + React (Next.js App Router)** | Server/client split, route handlers in `app/api/`, custom hooks in `lib/hooks/`, a small UI kit in `components/ui/` |
-| **Algorithms as pure functions** | DBSCAN clustering, risk scoring with time decay, route-card selection, turn-by-turn text from bearings: `lib/domain/` |
+| **Maps and 3D** | MapLibre layers, building extrusions highlighted by feature state, picking the right building under a tilted camera: `components/map/` |
+| **Algorithms as pure functions** | Search ranking, "next class", DBSCAN clustering, risk scoring with time decay, route-card selection, turn-by-turn text from bearings: `lib/domain/` |
 | **SQL and GIS** | PostGIS spatial joins, pgRouting cost functions with per-vehicle rules, RPCs and triggers: `supabase/migrations/` |
 | **Security** | Row Level Security on every table plus column-level grants, tested by switching roles in `supabase/tests/` |
 | **Testing and CI** | 31 unit tests and SQL tests, run on every push by GitHub Actions |
-| **Debugging real bugs** | Realtime channel reuse crash, a Chromium effect-cleanup crash, WebGL context loss: each root cause is explained in its commit |
+| **Debugging real bugs** | Realtime channel reuse crash, a Chromium effect-cleanup crash, WebGL context loss, picking merged map tiles: each root cause is explained in its commit |
 | **Integrating services** | Supabase Auth (Google, LINE), Open-Meteo, TomTom, a vision API for timetable screenshots, pg_cron jobs |
 
 I use an AI coding assistant as a tool to move faster. The design, the decisions and the responsibility for
 the code are mine.
 
 > ผมดูแลโปรเจกต์นี้ทั้งหมดตั้งแต่ตัดสินใจเรื่องผลิตภัณฑ์ สถาปัตยกรรม โครงสร้างข้อมูล จนถึงรีวิวโค้ดทุกส่วน
-> โลจิกทั้งหมด (สูตรความเสี่ยง, การจับกลุ่มโพสต์, ต้นทุนเส้นทาง, กฎกันสแปม, ระบบความปลอดภัย) ผมออกแบบเอง
+> โลจิกทั้งหมด (ค้นหาตึก, ตารางเรียน, ต้นทุนเส้นทาง, สูตรความเสี่ยงน้ำท่วม, กฎกันสแปม, ระบบความปลอดภัย) ผมออกแบบเอง
 > และบันทึกเหตุผลไว้ใน PLAN.md อธิบายได้ทุกไฟล์ ใช้ AI เป็นเครื่องมือช่วยให้ทำงานเร็วขึ้น
 
 ## What I'd do next
 
+- E2E tests (Playwright) for the search → timetable → navigate flow and for reporting a flood
 - Move clustering to PostGIS `ST_ClusterDBSCAN` once posts reach the thousands (today it's O(n²) in TypeScript, which is fine for hundreds)
-- Train a model on the saved snapshots once there's a season of labelled data
-- E2E tests (Playwright) for the report → map → route flow
+- Train a flood model on the saved snapshots once there's a season of labelled data
 
 ---
 
-Map and road data © OpenStreetMap contributors · Rain and elevation: Open-Meteo · Traffic: TomTom ·
+Map, road and building data © OpenStreetMap contributors · Rain and elevation: Open-Meteo · Traffic: TomTom ·
 Code released under the [MIT License](LICENSE).
