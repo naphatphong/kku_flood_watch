@@ -1,8 +1,15 @@
 # KKU Campus: flood map, flood-avoiding navigation and a campus companion
 
-> เว็บรวมเรื่องในมหาวิทยาลัยขอนแก่น (มข.): แผนที่น้ำท่วมจากรายงานของชุมชน, นำทางเลี่ยงน้ำท่วม/รถติด, ค้นหาตึกแบบ 3 มิติ, ตารางเรียน และพยากรณ์อากาศ
+[![CI](https://github.com/naphatphong/kku_flood_watch/actions/workflows/ci.yml/badge.svg)](https://github.com/naphatphong/kku_flood_watch/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Live demo](https://img.shields.io/badge/demo-kku--flood--watch.vercel.app-black)](https://kku-flood-watch.vercel.app)
 
 **Live:** https://kku-flood-watch.vercel.app
+
+> **สรุปภาษาไทย:** เว็บแอปฟูลสแตกสำหรับนักศึกษา มข. ที่รวมแผนที่น้ำท่วมจากรายงานของชุมชน
+> นำทางเลี่ยงถนนที่น้ำท่วมและรถติด ค้นหาตึกแบบ 3 มิติ ตารางเรียน และพยากรณ์อากาศ
+> จุดเด่นคือสูตรประเมินความเสี่ยงที่อธิบายได้ (ฝน + ความต่ำของพื้นที่ + รายงานจากผู้ใช้),
+> ระบบหาเส้นทางที่คำนวณในฐานข้อมูลด้วย pgRouting และความปลอดภัยระดับแถวข้อมูล (RLS) ที่มีเทสต์รองรับ
 
 Khon Kaen University floods during the rainy season, and students find out which roads are under water
 by getting their feet wet. KKU Campus is a **full-stack, crowd-sourced flood map with routing that avoids
@@ -10,6 +17,20 @@ flooded roads**. It grew into a campus companion: 3D building search, a class ti
 
 `Next.js 16` · `TypeScript` · `Supabase (Postgres + PostGIS + pgRouting + RLS + Realtime + pg_cron)` ·
 `MapLibre GL` · `Claude API (vision)` · `Open-Meteo` · `TomTom` · `Vercel`
+
+| Flood and traffic map | Flood-avoiding navigation |
+|---|---|
+| ![Home: flood map with live traffic](docs/screenshots/home.webp) | ![Navigation with route card and turn list](docs/screenshots/navigate.webp) |
+| **Building search with 3D highlight** | **Mobile** |
+| ![Campus building SC09 highlighted in 3D](docs/screenshots/campus.webp) | <img src="docs/screenshots/mobile.webp" alt="Mobile layout with bottom sheet" width="260"> |
+
+### Start here
+
+| If you have… | Read |
+|---|---|
+| 2 minutes | [Highlights](#highlights) and the screenshots above |
+| 10 minutes | [How I thought about it](#how-i-thought-about-it): the formula, routing and security model |
+| More | [docs/PLAN.md](docs/PLAN.md) (every decision and why), then `lib/domain/` (the rules, with tests) |
 
 ---
 
@@ -202,10 +223,13 @@ user only sees one card.
 
 ```bash
 npm install
+cp .env.example .env.local   # optional: leave it empty to run in demo mode
 npm run dev       # http://localhost:3000. Without Supabase it runs in demo mode (real rain, sample posts)
 npm test          # 31 unit tests for lib/domain
 npm run test:db   # migrations + RLS + SQL (needs Postgres with PostGIS and pgRouting)
 ```
+
+CI runs the unit tests, the type check and the database tests on every push.
 
 - **Connect Supabase, logins and scheduled jobs:** [docs/SETUP.md](docs/SETUP.md)
 - **Update building names:** `NODE_USE_ENV_PROXY=1 npx tsx scripts/import-buildings.ts` (extra names: [`lib/building-aliases.ts`](lib/building-aliases.ts))
@@ -213,6 +237,16 @@ npm run test:db   # migrations + RLS + SQL (needs Postgres with PostGIS and pgRo
 - **Every tunable number:** [`lib/config.ts`](lib/config.ts)
 
 Vercel deploys automatically on every push to `main`.
+
+## How I built this
+
+I defined the problem and made the design decisions: the flood-risk formula, clustering posts instead of
+fixed zones, the routing costs, the spam rules and the security model. Each decision is written down with
+its reasoning in [docs/PLAN.md](docs/PLAN.md). I used an AI coding assistant to speed up implementation,
+and I reviewed, tested and can explain every part of the system.
+
+> ผมเป็นคนกำหนดโจทย์และตัดสินใจเรื่องการออกแบบ (สูตรความเสี่ยง, การจับกลุ่มโพสต์, ต้นทุนเส้นทาง, กฎกันสแปม,
+> ระบบความปลอดภัย) โดยบันทึกเหตุผลไว้ใน PLAN.md และใช้ AI ช่วยเขียนโค้ดให้เร็วขึ้น ทุกส่วนผมรีวิว ทดสอบ และอธิบายได้
 
 ## What I'd do next
 
@@ -222,4 +256,5 @@ Vercel deploys automatically on every push to `main`.
 
 ---
 
-Map and road data © OpenStreetMap contributors · Rain and elevation: Open-Meteo · Traffic: TomTom
+Map and road data © OpenStreetMap contributors · Rain and elevation: Open-Meteo · Traffic: TomTom ·
+Code released under the [MIT License](LICENSE).
