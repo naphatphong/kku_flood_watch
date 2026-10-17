@@ -38,7 +38,7 @@ I didn't have historical flood data, so I couldn't train a model. Rather than fa
    enough labelled data to train a model. That includes "dry, passable" posts, because a model needs
    negative examples too.
 
-I wrote down every decision, plus the owner sign-off on it, in [docs/PLAN.md](docs/PLAN.md) (§0 overrides
+I wrote every decision down in [docs/PLAN.md](docs/PLAN.md) (§0 overrides
 the rest), and every tunable number lives in one file: [`lib/config.ts`](lib/config.ts).
 
 ### 2. System architecture
@@ -209,7 +209,7 @@ npm run test:db   # migrations + RLS + SQL (needs Postgres with PostGIS and pgRo
 
 - **Connect Supabase, logins and scheduled jobs:** [docs/SETUP.md](docs/SETUP.md)
 - **Update building names:** `NODE_USE_ENV_PROXY=1 npx tsx scripts/import-buildings.ts` (extra names: [`lib/building-aliases.ts`](lib/building-aliases.ts))
-- **Plan and owner decisions:** [docs/PLAN.md](docs/PLAN.md)
+- **Plan and decision log:** [docs/PLAN.md](docs/PLAN.md)
 - **Every tunable number:** [`lib/config.ts`](lib/config.ts)
 
 Vercel deploys automatically on every push to `main`.
