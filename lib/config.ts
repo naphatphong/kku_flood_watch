@@ -28,7 +28,7 @@ export const MAP = {
   pitch3d: 60, // tilt for the 3D button
 };
 
-// Live traffic (owner request, 27 Sep 2026): TomTom flow tiles, incidents and traffic-aware
+// Live traffic (27 Sep 2026): TomTom flow tiles, incidents and traffic-aware
 // travel times. Everything traffic is hidden until a key is set (SETUP.md 7.2).
 const TOMTOM_KEY = process.env.NEXT_PUBLIC_TOMTOM_KEY ?? '';
 
@@ -107,7 +107,7 @@ export const ROAD_STATUS = {
 export type RoadStatus = keyof typeof ROAD_STATUS;
 export type Passability = Exclude<RoadStatus, 'unknown'>;
 
-// Road incident posts (owner request, 27 Sep 2026): same flow as flood posts (login, photo,
+// Road incident posts (27 Sep 2026): same flow as flood posts (login, photo,
 // votes, flags, moderation) but no water level. Closures count as "blocked" for every vehicle,
 // so navigation avoids them; the others show as warnings on the route cards.
 export const INCIDENTS = {
@@ -165,7 +165,7 @@ export const CLUSTER = {
 };
 
 // Watch circles: pockets of low ground that may flood when it rains, before anyone posts
-// (owner request, 27 Sep 2026). Spots come from scripts/elevation-terciles.ts: re-run it after
+// (27 Sep 2026). Spots come from scripts/elevation-terciles.ts: re-run it after
 // changing neighbourM, pocketDepthM, epsM or minPoints (minPct applies right away).
 export const WATCH = {
   neighbourM: 750, // compare each 250 m grid point with the ground around it this far
@@ -175,7 +175,7 @@ export const WATCH = {
   minPct: 30, // show when rain × low-lying factor (PLAN §5 base) reaches this %
 };
 
-// Weather page (owner request, 27 Sep 2026): Open-Meteo forecast for the area center.
+// Weather page (27 Sep 2026): Open-Meteo forecast for the area center.
 export const WEATHER = {
   days: 10,
   cacheMinutes: 15,
@@ -237,7 +237,7 @@ export const LIMITS = {
   imageReads: { windowSeconds: 3600, maxRequests: 10 },
 };
 
-// Timetable import from the registrar (owner request, 5 Oct 2026). Screenshots are read by Claude
+// Timetable import from the registrar (5 Oct 2026). Screenshots are read with the Claude API
 // when the server has ANTHROPIC_API_KEY (SETUP.md); about 1 baht per read with this model and effort.
 export const REG_IMPORT = {
   model: 'claude-opus-5-5',
@@ -263,5 +263,5 @@ export const SPAM = {
   trustedMinApproved: 5,
   pendingAt: 50, // < 50 approved, 50–79 pending, >= 80 rejected
   rejectAt: 80,
-  bannedWords: [] as string[], // TODO(owner): banned word list (PLAN §12)
+  bannedWords: [] as string[], // TODO: banned word list (PLAN §12)
 };

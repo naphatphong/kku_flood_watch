@@ -41,7 +41,7 @@ language sql stable set search_path = public, extensions as $$
            (p ->> 'risky_min')::float8 as risky_min,
            (p ->> 'risky_penalty')::float8 as risky_penalty
   ), risky as (
-    -- ponytail: the degree box (radius / 100 km) over-covers the circle at this latitude; exact test follows.
+    -- Note: the degree box (radius / 100 km) over-covers the circle at this latitude; exact test follows.
     select distinct s.id
     from public.flood_clusters c cross join opt
     join public.road_segments s on s.geom && st_expand(c.center, c.radius_m / 100000.0)

@@ -1,4 +1,4 @@
--- Building codes from registrar timetables (owner request, 5 Oct 2026): "CP9" → a place. The first
+-- Building codes from registrar timetables (5 Oct 2026): "CP9" → a place. The first
 -- signed-in visitor to place an unknown code saves it for everyone, through the server, which
 -- checks the place (app/api/building-codes). Admins delete wrong ones; the next visitor re-places it.
 create table public.building_codes (

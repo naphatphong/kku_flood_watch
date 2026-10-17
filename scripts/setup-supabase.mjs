@@ -1,5 +1,5 @@
 // One-time Supabase setup over HTTPS (Management API): no psql, Docker or Supabase CLI needed.
-// Node 18+. Used by docs/COWORK.md; each command is safe to re-run.
+// Node 18+. See docs/SETUP.md; each command is safe to re-run.
 //
 //   export SUPABASE_ACCESS_TOKEN=sbp_...   # supabase.com/dashboard/account/tokens
 //   export SUPABASE_PROJECT_REF=abcd...    # from https://<ref>.supabase.co
@@ -49,7 +49,7 @@ const literal = (s) => `'${String(s).replace(/'/g, "''")}'`;
 
 async function migrate() {
   const dir = join(ROOT, 'supabase/migrations');
-  // The API lists {version, name}; migrations applied elsewhere (SQL editor, MCP) get other
+  // The API lists {version, name}; migrations applied elsewhere (SQL editor, other tools) get other
   // versions, so a file counts as applied when its version or its name matches.
   const applied = new Set(((await api('GET', '/database/migrations')) ?? []).flatMap((m) => [m.version, m.name]));
   for (const file of readdirSync(dir).filter((f) => f.endsWith('.sql')).sort()) {

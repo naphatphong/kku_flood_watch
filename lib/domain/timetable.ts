@@ -1,4 +1,4 @@
-// Class timetable (owner request, 5 Oct 2026): entered by hand or pasted from the registrar.
+// Class timetable (5 Oct 2026): entered by hand or pasted from the registrar.
 import type { PlaceRef } from './user-data';
 
 export interface ClassEntry {

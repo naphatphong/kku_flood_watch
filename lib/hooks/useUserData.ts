@@ -7,7 +7,7 @@ import { isSupabaseConfigured } from '@/lib/supabase/env';
 
 // One shared copy per tab, saved to localStorage on every edit and, when signed in, to the
 // account (table user_data). Device and account copies merge by edit time: the newer wins.
-// ponytail: whole-document last-write-wins; merge per item if people edit on two devices at once.
+// Note: whole-document last-write-wins; merge per item if people edit on two devices at once.
 const KEY = 'kfw-user-data';
 let state: UserData = EMPTY_USER_DATA;
 let loaded = false;

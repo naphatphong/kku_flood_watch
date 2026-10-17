@@ -1,4 +1,4 @@
--- What a signed-in visitor keeps (owner request, 5 Oct 2026): saved places and timetable as one
+-- What a signed-in visitor keeps (5 Oct 2026): saved places and timetable as one
 -- JSON document per user. The browser merges it with its own copy: the newer edit wins.
 create table public.user_data (
   user_id uuid primary key references public.profiles on delete cascade,

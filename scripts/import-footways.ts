@@ -1,4 +1,4 @@
-// Footpaths, walkways and steps on the KKU campus for walking routes (owner request, 5 Oct 2026).
+// Footpaths, walkways and steps on the KKU campus for walking routes (5 Oct 2026).
 // Writes supabase/seed/footways.sql, which adds them to the existing road graph as foot-only
 // segments (cars never use them) without touching roads, statuses or posts. Load it after roads.sql.
 //

@@ -17,7 +17,7 @@ do $$ begin
 end $$;
 
 -- Every 15 minutes (SCORE.refreshMinutes in lib/config.ts): call the app's refresh endpoint.
--- Needs two Vault secrets, created once by the owner (see SETUP.md):
+-- Needs two Vault secrets, created once (see SETUP.md):
 --   select vault.create_secret('https://<site>/api/cron/refresh', 'refresh_url');
 --   select vault.create_secret('<same value as CRON_SECRET on Vercel>', 'cron_secret');
 do $$ begin

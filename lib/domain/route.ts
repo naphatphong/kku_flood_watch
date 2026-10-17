@@ -318,7 +318,7 @@ const latLng = ([lng, lat]: LngLat) => `${lat.toFixed(6)},${lng.toFixed(6)}`;
  * Google Maps directions that follow our route through a few waypoints on it, then on to
  * `destination` (which may be beyond the area). No origin = the phone's current location.
  * Without a route (`coords` shorter than 2 points) it is a plain link to the destination.
- * ponytail: evenly spaced waypoints can miss a short detour; pick them at the detours if that shows up.
+ * Note: evenly spaced waypoints can miss a short detour; pick them at the detours if that shows up.
  */
 export function googleMapsUrl(coords: LngLat[], destination: LngLat, vehicle: Vehicle, origin: LngLat | null = null) {
   const params = new URLSearchParams({

@@ -1,4 +1,4 @@
--- Road incident posts (owner request, 27 Sep 2026): accidents, closures, obstacles and road
+-- Road incident posts (27 Sep 2026): accidents, closures, obstacles and road
 -- works share the reports table (votes, flags, moderation) with flood posts. They have no
 -- water level; closures carry "blocked" passability, so road status and navigation avoid them.
 -- Safe to re-run (it was first applied by hand in the SQL Editor).

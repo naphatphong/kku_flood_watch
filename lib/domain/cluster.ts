@@ -7,7 +7,7 @@ const round = (x: number, digits = 1) => Math.round(x * 10 ** digits) / 10 ** di
 
 /**
  * DBSCAN with minPts = 1: items chained within `epsM` share a group.
- * ponytail: O(n²) neighbour scan, fine for a few hundred points; move to PostGIS ST_ClusterDBSCAN beyond that.
+ * Note: O(n²) neighbour scan, fine for a few hundred points; move to PostGIS ST_ClusterDBSCAN beyond that.
  */
 export function groupNear<T>(items: T[], position: (t: T) => LngLat, epsM: number): T[][] {
   const groups: T[][] = [];

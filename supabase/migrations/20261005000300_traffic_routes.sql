@@ -1,4 +1,4 @@
--- "Avoid traffic" routes (owner request, 5 Oct 2026). The 15-minute refresh matches TomTom's slow
+-- "Avoid traffic" routes (5 Oct 2026). The 15-minute refresh matches TomTom's slow
 -- and closed roads to road segments (segment_traffic: share of free-flow speed, 0..1; missing = free).
 -- Routes then offer a third path: flood-blocked roads removed, travel time stretched by traffic.
 
@@ -49,7 +49,7 @@ language sql stable set search_path = public, extensions as $$
            coalesce((p ->> 'traffic')::boolean, false) as traffic,
            coalesce((p ->> 'traffic_min')::float8, 0.2) as traffic_min
   ), risky as (
-    -- ponytail: the degree box (radius / 100 km) over-covers the circle at this latitude; exact test follows.
+    -- Note: the degree box (radius / 100 km) over-covers the circle at this latitude; exact test follows.
     select distinct s.id
     from public.flood_clusters c cross join opt
     join public.road_segments s on s.geom && st_expand(c.center, c.radius_m / 100000.0)

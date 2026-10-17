@@ -1,4 +1,4 @@
-// Timetable import from the KKU registrar (reg.kku.ac.th, owner request 5 Oct 2026): the copied
+// Timetable import from the KKU registrar (reg.kku.ac.th, 5 Oct 2026): the copied
 // timetable grid, or rows Claude read from a screenshot. The visitor reviews every row before saving.
 import { buildingCode, type Building } from './buildings';
 import { minutesOf } from './timetable';

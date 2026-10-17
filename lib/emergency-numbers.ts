@@ -1,4 +1,4 @@
-// Emergency numbers behind the SOS button (owner request, 6 Oct 2026). Edit numbers here only.
+// Emergency numbers behind the SOS button (6 Oct 2026). Edit numbers here only.
 // KKU numbers were checked on the official pages on 6 Oct 2026; check again when one stops working.
 //   sd.kku.ac.th/home/sd-about/contact-us   KKU security (กองป้องกันและรักษาความปลอดภัย)
 //   srinagarind.md.kku.ac.th/post/5         Srinagarind Hospital (no ER line on its official pages: use 1669)

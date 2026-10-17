@@ -1,4 +1,4 @@
--- Campus footpaths for walking routes (owner request, 5 Oct 2026). supabase/seed/footways.sql adds
+-- Campus footpaths for walking routes (5 Oct 2026). supabase/seed/footways.sql adds
 -- them to the road graph as foot-only segments: only the "walk" vehicle may use them.
 alter table public.road_segments add column foot_only boolean not null default false;
 
@@ -15,7 +15,7 @@ language sql stable set search_path = public, extensions as $$
            (p ->> 'risky_min')::float8 as risky_min,
            (p ->> 'risky_penalty')::float8 as risky_penalty
   ), risky as (
-    -- ponytail: the degree box (radius / 100 km) over-covers the circle at this latitude; exact test follows.
+    -- Note: the degree box (radius / 100 km) over-covers the circle at this latitude; exact test follows.
     select distinct s.id
     from public.flood_clusters c cross join opt
     join public.road_segments s on s.geom && st_expand(c.center, c.radius_m / 100000.0)

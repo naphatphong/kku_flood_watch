@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { REG_IMPORT } from '../config';
 import { regClassesFrom, type RegClass } from '../domain/reg-import';
 
-/** Screenshot reading is on once the owner sets ANTHROPIC_API_KEY (SETUP.md). */
+/** Screenshot reading is on once ANTHROPIC_API_KEY is set (SETUP.md). */
 export const imageImportEnabled = () => Boolean(process.env.ANTHROPIC_API_KEY);
 
 export class ImageReadError extends Error {

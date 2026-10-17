@@ -1,4 +1,4 @@
-// Every named campus building's name, small and grey from zoom 15 (owner request, 7 Oct 2026).
+// Every named campus building's name, small and grey from zoom 15 (7 Oct 2026).
 // Any building under the mouse turns blue (with its name); a tap on any building selects it, unnamed
 // ones included, so every building can be navigated to (the page decides what a tap does).
 // Buildings already highlighted (place-layer.ts) hide their grey name: the blue label shows instead.

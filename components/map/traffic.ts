@@ -124,7 +124,7 @@ export function addTraffic(map: MapLibreMap) {
   map.addControl({ onAdd: () => x.legend, onRemove: () => x.legend.remove() }, 'top-right');
   setTraffic(map, trafficStored());
 
-  // ponytail: incidents load once per page view; poll here if people keep the map open for hours.
+  // Note: incidents load once per page view; poll here if people keep the map open for hours.
   fetch('/api/traffic')
     .then((r) => (r.ok ? r.json() : { incidents: [] }))
     .then(({ incidents }: { incidents: IncidentDTO[] }) => {
