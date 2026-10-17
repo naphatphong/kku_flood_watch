@@ -109,6 +109,70 @@ CI runs the unit tests, the type check and the database tests on every push.
 
 Vercel deploys automatically on every push to `main`.
 
+## Structure, flow and logic
+
+### How the code is layered
+
+Each layer only talks to the one below it, and the bottom layer never touches I/O. That is why the rules can be
+tested in under a second and reused by the data-prep scripts.
+
+```mermaid
+flowchart TB
+    subgraph Browser["Browser"]
+        PAGES["Pages and components<br/>(Next.js App Router, MapLibre)"]
+        HOOKS["Hooks<br/>useMapData · useUserData · useBuildings"]
+    end
+    subgraph Server["Server (Vercel)"]
+        API["Route handlers<br/>app/api/*"]
+        DATA["lib/data<br/>reads and writes, external APIs"]
+        DOMAIN["lib/domain<br/>pure rules, no I/O, unit-tested"]
+    end
+    subgraph Services["Services"]
+        DB[("Supabase<br/>Postgres · PostGIS · pgRouting · RLS")]
+        EXT["Open-Meteo · TomTom · Vision API"]
+    end
+    PAGES --> HOOKS
+    HOOKS -->|fetch| API
+    HOOKS -.->|realtime and auth| DB
+    API --> DATA
+    DATA --> DOMAIN
+    DATA --> DB
+    DATA --> EXT
+    CRON["pg_cron, every 15 min"] -->|POST /api/cron/refresh| API
+```
+
+### A student's flow through the app
+
+```mermaid
+flowchart LR
+    S[Search a building] --> B[Building card]
+    B -->|Save| P[Saved places]
+    B -->|Add to timetable| T[Timetable]
+    I[Import from the registrar] --> T
+    T --> D["Pick a day: its buildings<br/>are numbered on the map"]
+    T --> N["Next-class card"]
+    B -->|Navigate| R
+    N -->|Navigate| R
+    P -->|Navigate| R
+    R["Route cards<br/>safest · balanced · avoid traffic · shortest"] --> G[Turn-by-turn, reroute if a road ahead is blocked]
+```
+
+### The logic, in one place
+
+| Logic | How it decides | Code |
+|---|---|---|
+| **Building search** | Normalise text (case, spaces, leading zeros, Thai "ะ"), every word must match; exact code 100, prefix 40, contains 20, teaching places win ties | `lib/domain/buildings.ts` |
+| **Next class** | For today and the next 6 days (Bangkok time), take the first class that has not ended; "minutes until" goes negative while it runs | `lib/domain/timetable.ts` |
+| **Registrar import** | Pasted table: each cell's `colspan` gives start and end. Screenshot: schema-checked output, validated, reviewed by the user | `lib/domain/reg-import.ts` |
+| **Route cards** | Safest first; add balanced, avoid-traffic and shortest only when each is at least 5% faster than every card before it; live traffic times may drop a card | `lib/domain/route.ts` |
+| **Road cost** | `length / speed`, x3 if hard to pass, x1.5 inside a circle at 60%+, removed if blocked, no driving against one-way streets | `supabase/migrations/*routing*` |
+| **Flood risk** | `final = (1 - c) * base + c * report`, with `c = min(0.8, 0.16 * sum of post weights)` | `lib/domain/cluster.ts` |
+| **Post weight** | Halves every 2 hours, expires after 6 hours; "still flooded" x1.2 (max x2), "receded" x0.6 | `lib/domain/post.ts` |
+| **Spam score** | Under 50 approved, 50 to 79 pending for review, 80 and above rejected | `lib/domain/spam.ts` |
+
+The full reasoning, with diagrams for the report lifecycle, the formula and routing, is in
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## How I built this
 
 I own this codebase end to end: the product decisions, the architecture, the data model and every code
